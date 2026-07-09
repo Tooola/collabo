@@ -1,0 +1,18 @@
+import { Router } from 'express';
+import { teamController } from '../controllers/teamController';
+import { authenticate } from '../middlewares/authenticate';
+import { authorize } from '../middlewares/authorize';
+
+const router = Router();
+
+router.use(authenticate);
+router.get('/', authorize(['ADMIN', 'LEAD', 'DEV']), teamController.getAll);
+router.get('/:id', authorize(['ADMIN', 'LEAD', 'DEV']), teamController.getById);
+router.post('/', authorize(['ADMIN']), teamController.create);
+router.put('/:id', authorize(['ADMIN']), teamController.update);
+router.delete('/:id', authorize(['ADMIN']), teamController.delete);
+router.get('/:id/members', authorize(['ADMIN', 'LEAD', 'DEV']), teamController.getMembers);
+router.post('/:id/members', authorize(['ADMIN']), teamController.addMember);
+router.delete('/:id/members/:userId', authorize(['ADMIN']), teamController.removeMember);
+
+export default router;

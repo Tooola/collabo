@@ -1,0 +1,142 @@
+openapi: 3.0.3
+info:
+  title: PM Dashboard API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3001/api
+paths:
+  /auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200": { description: Authenticated }
+        "401": { description: Invalid credentials }
+  /auth/logout:
+    post:
+      summary: Logout
+      responses:
+        "200": { description: Logged out }
+  /auth/me:
+    get:
+      summary: Current user
+      responses:
+        "200": { description: Current user }
+  /projects:
+    get:
+      summary: List projects
+      responses:
+        "200": { description: Project list }
+    post:
+      summary: Create project
+      responses:
+        "201": { description: Project created }
+  /projects/{id}:
+    get:
+      summary: Get project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Project }
+    put:
+      summary: Update project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Project updated }
+    delete:
+      summary: Delete project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Project deleted }
+  /projects/{id}/tasks:
+    get:
+      summary: List project tasks
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Task list }
+  /tasks:
+    get:
+      summary: List visible tasks
+      responses:
+        "200": { description: Task list }
+    post:
+      summary: Create task
+      responses:
+        "201": { description: Task created }
+  /tasks/{id}:
+    get:
+      summary: Get task
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Task }
+    put:
+      summary: Update task
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Task updated }
+    delete:
+      summary: Delete task
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Task deleted }
+  /tasks/{id}/status:
+    patch:
+      summary: Update task status
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Status updated }
+  /teams:
+    get:
+      summary: List teams
+      responses:
+        "200": { description: Team list }
+    post:
+      summary: Create team
+      responses:
+        "201": { description: Team created }
+  /teams/{id}/members:
+    get:
+      summary: List team members
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Member list }
+    post:
+      summary: Add member
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200": { description: Member added }
+  /users:
+    get:
+      summary: List users
+      responses:
+        "200": { description: User list }
+    post:
+      summary: Create user
+      responses:
+        "201": { description: User created }
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
