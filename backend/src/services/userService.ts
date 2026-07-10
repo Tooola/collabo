@@ -51,7 +51,7 @@ export const userService = {
       loginUrl,
     });
 
-    sendEmail(normalizedEmail, `Bienvenue sur GestPro — Vos identifiants de connexion`, html)
+    await sendEmail(normalizedEmail, `Bienvenue sur GestPro — Vos identifiants de connexion`, html)
       .catch(err => console.error('❌ Welcome email failed:', err));
 
     return formatUser(user);
