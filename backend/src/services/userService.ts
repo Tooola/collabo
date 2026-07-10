@@ -34,9 +34,12 @@ export const userService = {
       workspaceId: req.user!.workspaceId
     });
 
+    // Dynamically use the request origin if available, fallback to env.frontendUrl
+    const baseUrl = req.headers.origin || env.frontendUrl;
+    
     // Build role-specific login URL for the email link
     const roleParam = dbRole.toLowerCase();
-    const loginUrl = `${env.frontendUrl}/login?role=${roleParam}`;
+    const loginUrl = `${baseUrl}/login?role=${roleParam}`;
 
     // Send welcome email (non-blocking — failure shouldn't break user creation)
     const html = buildWelcomeEmailHtml({
