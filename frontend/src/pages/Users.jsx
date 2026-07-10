@@ -55,7 +55,9 @@ function UserModal({ open, onClose, user, teams, onCreate, onUpdate }) {
     const res = isEdit ? await onUpdate(user.id, payload) : await onCreate(payload);
     setLoading(false);
     if (!res.ok) {
-      setError(res.data?.message || 'Une erreur est survenue');
+      const msg = res.data?.message;
+      // Zod returns an array of error objects — extract the text messages
+      setError(Array.isArray(msg) ? msg.map(e => e.message).join(', ') : (msg || 'Une erreur est survenue'));
     } else {
       onClose(isEdit ? null : res.data.user);
     }
