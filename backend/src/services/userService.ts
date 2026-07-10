@@ -1,8 +1,12 @@
 import { User } from '../models/User';
 import { Task } from '../models/Task';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { AuthRequest } from '../middlewares/authenticate';
 import { formatUser, roleFromClient } from '../utils/formatters';
+import { sendEmail } from '../utils/mailer';
+import { buildWelcomeEmailHtml } from '../utils/emailTemplates';
+import { env } from '../config/env';
 
 export const userService = {
   async getAll(req: AuthRequest) {
@@ -15,18 +19,40 @@ export const userService = {
     return user ? formatUser(user) : null;
   },
 
-  async create(data: { name: string; email: string; password: string; role?: string; teamId?: string | null }, req: AuthRequest) {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+  async create(data: { name: string; email: string; password?: string; role?: string; teamId?: string | null }, req: AuthRequest) {
+    // Generate a secure temporary password if none provided
+    const tempPassword = data.password || crypto.randomBytes(8).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) + '!Gp1';
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    const dbRole = roleFromClient(data.role) ?? 'DEV';
+
     const user = await User.create({
       name: data.name,
       email: data.email,
       password: hashedPassword,
-      role: roleFromClient(data.role) ?? 'DEV',
+      role: dbRole,
       teamId: data.teamId || null,
       workspaceId: req.user!.workspaceId
     });
+
+    // Build role-specific login URL for the email link
+    const roleParam = dbRole.toLowerCase();
+    const loginUrl = `${env.frontendUrl}/login?role=${roleParam}`;
+
+    // Send welcome email (non-blocking — failure shouldn't break user creation)
+    const html = buildWelcomeEmailHtml({
+      userName: data.name,
+      userEmail: data.email,
+      tempPassword,
+      role: dbRole,
+      loginUrl,
+    });
+
+    sendEmail(data.email, `Bienvenue sur GestPro — Vos identifiants de connexion`, html)
+      .catch(err => console.error('❌ Welcome email failed:', err));
+
     return formatUser(user);
   },
+
 
   async update(id: string, data: { name?: string; email?: string; password?: string; role?: string; teamId?: string | null }) {
     const updateData: Record<string, any> = {};
