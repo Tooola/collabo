@@ -1,5 +1,11 @@
-import mongoose from 'mongoose';
-import { env } from '../config/env';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.connectDB = connectDB;
+const mongoose_1 = __importDefault(require("mongoose"));
+const env_1 = require("../config/env");
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially
@@ -9,7 +15,7 @@ let cached = global.mongoose;
 if (!cached) {
     cached = global.mongoose = { conn: null, promise: null };
 }
-export async function connectDB() {
+async function connectDB() {
     if (cached.conn) {
         return cached.conn;
     }
@@ -17,7 +23,7 @@ export async function connectDB() {
         const opts = {
             bufferCommands: false,
         };
-        cached.promise = mongoose.connect(env.mongoUri, opts).then((mongoose) => {
+        cached.promise = mongoose_1.default.connect(env_1.env.mongoUri, opts).then((mongoose) => {
             console.log('Successfully connected to MongoDB');
             return mongoose;
         });

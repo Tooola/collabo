@@ -5,6 +5,7 @@ export interface AuthRequest extends Request {
         email: string;
         role: string;
         teamId: string | null;
+        workspaceId: string;
     };
 }
 export declare const authenticate: (req: AuthRequest, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;

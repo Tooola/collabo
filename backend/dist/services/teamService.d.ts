@@ -19,7 +19,7 @@ export declare const teamService: {
     create(data: {
         name: string;
         description?: string;
-    }): Promise<{
+    }, req: AuthRequest): Promise<{
         id: any;
         name: any;
         description: any;

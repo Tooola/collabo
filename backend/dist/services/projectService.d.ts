@@ -37,7 +37,7 @@ export declare const projectService: {
         description?: string;
         teamId: string;
         status?: string;
-    }): Promise<{
+    }, req: AuthRequest): Promise<{
         id: any;
         name: any;
         description: any;

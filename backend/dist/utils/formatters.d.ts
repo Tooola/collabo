@@ -40,6 +40,7 @@ export declare const formatTask: (task: any) => {
     title: any;
     description: any;
     projectId: any;
+    parentId: any;
     assignedToUserId: any;
     dueDate: string | null;
     status: "To Do" | "In Progress" | "Blocked" | "Done";

@@ -1,13 +1,16 @@
-import { z } from 'zod';
-export const createProjectSchema = z.object({
-    name: z.string().min(1),
-    description: z.string().optional(),
-    status: z.enum(['active', 'on_hold', 'completed', 'EN_COURS', 'TERMINE', 'SUSPENDU']).default('active'),
-    teamId: z.string()
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateProjectSchema = exports.createProjectSchema = void 0;
+const zod_1 = require("zod");
+exports.createProjectSchema = zod_1.z.object({
+    name: zod_1.z.string().min(1),
+    description: zod_1.z.string().optional(),
+    status: zod_1.z.enum(['active', 'on_hold', 'completed', 'EN_COURS', 'TERMINE', 'SUSPENDU']).default('active'),
+    teamId: zod_1.z.string()
 });
-export const updateProjectSchema = z.object({
-    name: z.string().min(1).optional(),
-    description: z.string().optional(),
-    status: z.enum(['active', 'on_hold', 'completed', 'EN_COURS', 'TERMINE', 'SUSPENDU']).optional(),
-    teamId: z.string().optional()
+exports.updateProjectSchema = zod_1.z.object({
+    name: zod_1.z.string().min(1).optional(),
+    description: zod_1.z.string().optional(),
+    status: zod_1.z.enum(['active', 'on_hold', 'completed', 'EN_COURS', 'TERMINE', 'SUSPENDU']).optional(),
+    teamId: zod_1.z.string().optional()
 });

@@ -1,5 +1,6 @@
+import { AuthRequest } from '../middlewares/authenticate';
 export declare const userService: {
-    getAll(): Promise<{
+    getAll(req: AuthRequest): Promise<{
         id: any;
         name: any;
         email: any;
@@ -23,7 +24,7 @@ export declare const userService: {
         password: string;
         role?: string;
         teamId?: string | null;
-    }): Promise<{
+    }, req: AuthRequest): Promise<{
         id: any;
         name: any;
         email: any;

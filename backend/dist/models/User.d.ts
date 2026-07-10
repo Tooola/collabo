@@ -5,6 +5,9 @@ export interface IUser extends Document {
     password?: string;
     role: 'ADMIN' | 'LEAD' | 'DEV';
     teamId?: mongoose.Types.ObjectId;
+    workspaceId: mongoose.Types.ObjectId;
+    otpCode?: string;
+    otpExpiresAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }

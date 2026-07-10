@@ -4,6 +4,7 @@ export interface IProject extends Document {
     description?: string;
     status: 'EN_COURS' | 'TERMINE' | 'SUSPENDU';
     teamId: mongoose.Types.ObjectId;
+    workspaceId: mongoose.Types.ObjectId;
     createdAt: Date;
 }
 export declare const Project: mongoose.Model<any, {}, {}, {}, any, any, any>;

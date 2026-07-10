@@ -3,6 +3,7 @@ export declare const createTaskSchema: z.ZodObject<{
     title: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
     projectId: z.ZodString;
+    parentId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     assignedTo: z.ZodOptional<z.ZodString>;
     assignedToUserId: z.ZodOptional<z.ZodString>;
     dueDate: z.ZodOptional<z.ZodString>;
@@ -12,6 +13,7 @@ export declare const createTaskSchema: z.ZodObject<{
     title: string;
     projectId: string;
     description?: string | undefined;
+    parentId?: string | null | undefined;
     assignedTo?: string | undefined;
     dueDate?: string | undefined;
     assignedToUserId?: string | undefined;
@@ -20,6 +22,7 @@ export declare const createTaskSchema: z.ZodObject<{
     projectId: string;
     description?: string | undefined;
     status?: "EN_COURS" | "TERMINE" | "A_FAIRE" | "BLOQUE" | "To Do" | "In Progress" | "Blocked" | "Done" | undefined;
+    parentId?: string | null | undefined;
     assignedTo?: string | undefined;
     dueDate?: string | undefined;
     assignedToUserId?: string | undefined;
@@ -28,6 +31,7 @@ export declare const updateTaskSchema: z.ZodObject<{
     title: z.ZodOptional<z.ZodString>;
     description: z.ZodOptional<z.ZodString>;
     projectId: z.ZodOptional<z.ZodString>;
+    parentId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     assignedTo: z.ZodOptional<z.ZodString>;
     assignedToUserId: z.ZodOptional<z.ZodString>;
     dueDate: z.ZodOptional<z.ZodString>;
@@ -37,6 +41,7 @@ export declare const updateTaskSchema: z.ZodObject<{
     status?: "EN_COURS" | "TERMINE" | "A_FAIRE" | "BLOQUE" | "To Do" | "In Progress" | "Blocked" | "Done" | undefined;
     title?: string | undefined;
     projectId?: string | undefined;
+    parentId?: string | null | undefined;
     assignedTo?: string | undefined;
     dueDate?: string | undefined;
     assignedToUserId?: string | undefined;
@@ -45,6 +50,7 @@ export declare const updateTaskSchema: z.ZodObject<{
     status?: "EN_COURS" | "TERMINE" | "A_FAIRE" | "BLOQUE" | "To Do" | "In Progress" | "Blocked" | "Done" | undefined;
     title?: string | undefined;
     projectId?: string | undefined;
+    parentId?: string | null | undefined;
     assignedTo?: string | undefined;
     dueDate?: string | undefined;
     assignedToUserId?: string | undefined;

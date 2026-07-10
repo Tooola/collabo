@@ -5,6 +5,7 @@ export declare const taskService: {
         title: any;
         description: any;
         projectId: any;
+        parentId: any;
         assignedToUserId: any;
         dueDate: string | null;
         status: "To Do" | "In Progress" | "Blocked" | "Done";
@@ -24,6 +25,7 @@ export declare const taskService: {
         title: any;
         description: any;
         projectId: any;
+        parentId: any;
         assignedToUserId: any;
         dueDate: string | null;
         status: "To Do" | "In Progress" | "Blocked" | "Done";
@@ -43,6 +45,7 @@ export declare const taskService: {
         title: any;
         description: any;
         projectId: any;
+        parentId: any;
         assignedToUserId: any;
         dueDate: string | null;
         status: "To Do" | "In Progress" | "Blocked" | "Done";
@@ -61,6 +64,7 @@ export declare const taskService: {
         title: string;
         description?: string;
         projectId: string;
+        parentId?: string | null;
         assignedTo?: string;
         assignedToUserId?: string;
         dueDate?: string | Date;
@@ -70,6 +74,7 @@ export declare const taskService: {
         title: any;
         description: any;
         projectId: any;
+        parentId: any;
         assignedToUserId: any;
         dueDate: string | null;
         status: "To Do" | "In Progress" | "Blocked" | "Done";
@@ -88,6 +93,7 @@ export declare const taskService: {
         title?: string;
         description?: string;
         projectId?: string;
+        parentId?: string | null;
         assignedTo?: string;
         assignedToUserId?: string;
         dueDate?: string | Date;
@@ -97,6 +103,7 @@ export declare const taskService: {
         title: any;
         description: any;
         projectId: any;
+        parentId: any;
         assignedToUserId: any;
         dueDate: string | null;
         status: "To Do" | "In Progress" | "Blocked" | "Done";
@@ -116,6 +123,7 @@ export declare const taskService: {
         title: any;
         description: any;
         projectId: any;
+        parentId: any;
         assignedToUserId: any;
         dueDate: string | null;
         status: "To Do" | "In Progress" | "Blocked" | "Done";
