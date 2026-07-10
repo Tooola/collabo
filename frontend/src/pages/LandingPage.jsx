@@ -4,7 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   Languages, Sun, Moon, ShieldCheck, Users, Code, CheckCircle2,
-  Zap, BarChart3, Clock, Lock, Globe2, ArrowRight, Star,
+  Zap, BarChart3, Clock, Lock, Globe, ArrowRight, Star,
   ChevronDown, ChevronUp, Rocket, TrendingUp, MessageSquare
 } from 'lucide-react';
 import { useState } from 'react';
@@ -52,7 +52,7 @@ export default function LandingPage() {
     { icon: Zap,        label: language === 'fr' ? 'Déploiement instantané' : 'Instant deployment' },
     { icon: Lock,       label: language === 'fr' ? 'Sécurité enterprise' : 'Enterprise security' },
     { icon: BarChart3,  label: language === 'fr' ? 'Analytics en temps réel' : 'Real-time analytics' },
-    { icon: Globe2,     label: language === 'fr' ? 'Multi-langue' : 'Multi-language' },
+    { icon: Globe,       label: language === 'fr' ? 'Multi-langue' : 'Multi-language' },
     { icon: Clock,      label: language === 'fr' ? 'Historique complet' : 'Full history' },
     { icon: MessageSquare, label: language === 'fr' ? 'Notifications email' : 'Email notifications' },
   ];
