@@ -25,9 +25,10 @@ export const userService = {
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
     const dbRole = roleFromClient(data.role) ?? 'DEV';
 
+    const normalizedEmail = data.email.toLowerCase().trim();
     const user = await User.create({
       name: data.name,
-      email: data.email,
+      email: normalizedEmail,
       password: hashedPassword,
       role: dbRole,
       teamId: data.teamId || null,
@@ -44,7 +45,7 @@ export const userService = {
     // Send welcome email (non-blocking — failure shouldn't break user creation)
     const html = buildWelcomeEmailHtml({
       userName: data.name,
-      userEmail: data.email,
+      userEmail: normalizedEmail,
       tempPassword,
       role: dbRole,
       loginUrl,

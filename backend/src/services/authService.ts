@@ -9,7 +9,9 @@ import { buildOtpEmailHtml } from '../utils/emailTemplates';
 
 export const authService = {
   async login(email: string, password: string, requestedRole?: string) {
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedPassword = password.trim();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return null;
 
     // Validate role
@@ -20,7 +22,7 @@ export const authService = {
       }
     }
 
-    const valid = await bcrypt.compare(password, user.password!);
+    const valid = await bcrypt.compare(normalizedPassword, user.password!);
     if (!valid) return null;
 
     // Generate OTP
@@ -41,7 +43,10 @@ export const authService = {
   },
 
   async verifyOtp(data: { email: string; password: string; role?: string; otp: string }) {
-    const user = await User.findOne({ email: data.email });
+    const normalizedEmail = data.email.toLowerCase().trim();
+    const normalizedPassword = data.password.trim();
+    
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return null;
 
     if (data.role) {
@@ -51,7 +56,7 @@ export const authService = {
       }
     }
 
-    const valid = await bcrypt.compare(data.password, user.password!);
+    const valid = await bcrypt.compare(normalizedPassword, user.password!);
     if (!valid) return null;
 
     if (user.otpCode !== data.otp || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {
