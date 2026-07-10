@@ -11,6 +11,7 @@ import taskRoutes from './routes/taskRoutes';
 import teamRoutes from './routes/teamRoutes';
 import userRoutes from './routes/userRoutes';
 import { errorHandler } from './middlewares/errorHandler';
+import { connectDB } from './services/database';
 
 const app = express();
 
@@ -57,6 +58,16 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Ensure DB is connected before handling API routes
+app.use(async (_req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
@@ -64,7 +75,6 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/users', userRoutes);
 
-import { connectDB } from './services/database';
 
 app.use(errorHandler);
 
