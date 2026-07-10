@@ -6,7 +6,7 @@ import {
   UserCog, Shield, Code2, Briefcase, Plus, Edit2, Trash2, Eye, EyeOff, Copy, Check, X
 } from 'lucide-react';
 
-const DEFAULT_PASSWORD = 'GestPro@2025';
+const DEFAULT_PASSWORD = '';
 
 const ROLES = [
   { value: 'admin', label: 'Admin', icon: Shield, color: 'text-purple-500 bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/30' },
@@ -144,14 +144,14 @@ function UserModal({ open, onClose, user, teams, onCreate, onUpdate }) {
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              {isEdit ? 'Nouveau mot de passe (laisser vide = inchangé)' : 'Mot de passe par défaut'}
+              {isEdit ? 'Nouveau mot de passe (laisser vide = inchangé)' : 'Mot de passe (optionnel)'}
             </label>
             <div className="relative">
               <input
                 type={showPass ? 'text' : 'password'}
                 value={form.password}
                 onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                placeholder={isEdit ? 'Laisser vide pour ne pas changer' : ''}
+                placeholder={isEdit ? 'Laisser vide pour ne pas changer' : 'Laisser vide pour générer automatiquement'}
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2.5 pr-10 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button type="button" onClick={() => setShowPass(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -159,8 +159,8 @@ function UserModal({ open, onClose, user, teams, onCreate, onUpdate }) {
               </button>
             </div>
             {!isEdit && (
-              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                ⚠️ L'utilisateur devra changer ce mot de passe à sa première connexion.
+              <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
+                📧 Si vide, un mot de passe sera généré et envoyé par e-mail à l'utilisateur.
               </p>
             )}
           </div>
@@ -188,14 +188,6 @@ function UserModal({ open, onClose, user, teams, onCreate, onUpdate }) {
 }
 
 function CreatedUserModal({ open, user, onClose }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = () => {
-    navigator.clipboard.writeText(DEFAULT_PASSWORD);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   if (!open || !user) return null;
 
   return (
@@ -209,25 +201,24 @@ function CreatedUserModal({ open, user, onClose }) {
           <span className="font-semibold text-slate-700 dark:text-slate-200">{user.name}</span> a été créé avec succès.
         </p>
 
-        <div className="mb-4 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4">
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">🔐 Mot de passe par défaut (à copier)</p>
-          <div className="flex items-center justify-between gap-3">
-            <code className="text-sm font-bold text-amber-800 dark:text-amber-300 select-all">{DEFAULT_PASSWORD}</code>
-            <button onClick={copy} className="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 transition-colors">
-              {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-            </button>
+        <div className="mb-4 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">📧</span>
+            <p className="text-sm text-indigo-700 dark:text-indigo-300 text-left leading-relaxed">
+              Un e-mail de bienvenue a été envoyé à <strong>{user.email}</strong> avec ses identifiants de connexion et un lien direct vers la plateforme.
+            </p>
           </div>
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
-          Transmettez ce mot de passe à l'utilisateur. Il pourra le modifier depuis son profil.
+          L'utilisateur peut se connecter dès maintenant avec le lien dans son e-mail.
         </p>
 
         <button
           onClick={onClose}
           className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
         >
-          OK, c'est noté !
+          Parfait !
         </button>
       </div>
     </div>

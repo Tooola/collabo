@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -42,8 +42,13 @@ const ROLES = [
 ];
 
 export default function Login() {
-  const [step, setStep] = useState('role'); // 'role' | 'form' | 'otp'
-  const [selectedRole, setSelectedRole] = useState(null);
+  const [searchParams] = useSearchParams();
+  const initialRole = searchParams.get('role'); // e.g. ?role=lead
+  const validRoles = ['admin', 'lead', 'dev'];
+  const preselected = validRoles.includes(initialRole) ? initialRole : null;
+
+  const [step, setStep] = useState(preselected ? 'form' : 'role');
+  const [selectedRole, setSelectedRole] = useState(preselected);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');

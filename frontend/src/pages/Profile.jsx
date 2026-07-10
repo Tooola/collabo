@@ -111,8 +111,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {user.role?.toUpperCase() === 'ADMIN' && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm p-6 sm:p-8">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm p-6 sm:p-8">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{t('profile', 'editProfile')}</h3>
           <form onSubmit={handleNameSubmit} className="space-y-4 max-w-md">
             <div>
@@ -141,7 +140,6 @@ export default function Profile() {
             )}
           </form>
         </div>
-      )}
 
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm p-6 sm:p-8">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{t('profile', 'security')}</h3>

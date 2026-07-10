@@ -47,9 +47,9 @@ export default function Dashboard() {
     : tasks;
 
   const overdueMy = myTasks.filter(
-    t => t.status !== 'Done' && new Date(t.dueDate) < new Date()
+    t => t.status !== 'TERMINE' && new Date(t.dueDate) < new Date()
   );
-  const blockedMy = myTasks.filter(t => t.status === 'Blocked');
+  const blockedMy = myTasks.filter(t => t.status === 'BLOQUE');
 
   if (loading && projects.length === 0) return <LoadingSpinner />;
 
