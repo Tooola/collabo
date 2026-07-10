@@ -5,6 +5,7 @@ import { User } from '../models/User';
 import { env } from '../config/env';
 import { formatUser, roleFromClient } from '../utils/formatters';
 import { sendEmail } from '../utils/mailer';
+import { buildOtpEmailHtml } from '../utils/emailTemplates';
 
 export const authService = {
   async login(email: string, password: string, requestedRole?: string) {
@@ -33,16 +34,7 @@ export const authService = {
     console.log(`\n=========================================\n`);
 
     // Send email
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Vérification de connexion - GestPro</h2>
-        <p>Bonjour,</p>
-        <p>Voici votre code de vérification à usage unique (OTP) :</p>
-        <h1 style="background-color: #f4f4f5; padding: 10px 20px; display: inline-block; letter-spacing: 5px; border-radius: 8px; color: #4f46e5;">${otpCode}</h1>
-        <p>Ce code expirera dans 5 minutes.</p>
-        <p>Si vous n'avez pas demandé ce code, vous pouvez ignorer cet e-mail.</p>
-      </div>
-    `;
+    const emailHtml = buildOtpEmailHtml(otpCode);
     await sendEmail(user.email, 'Code de vérification - GestPro', emailHtml);
 
     return { requireOtp: true };
