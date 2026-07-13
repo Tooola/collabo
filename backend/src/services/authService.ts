@@ -110,5 +110,45 @@ export const authService = {
   async me(id: string) {
     const user = await User.findById(id);
     return user ? formatUser(user) : null;
+  },
+
+  async forgotPassword(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) return { success: true }; // Always return success for security (prevent email enumeration)
+
+    // Generate 6-digit code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    user.resetPasswordToken = resetCode;
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    await user.save();
+
+    console.log(`\n=========================================\n`);
+    console.log(`🔄 CODE DE RÉINITIALISATION pour ${user.email} : ${resetCode}`);
+    console.log(`\n=========================================\n`);
+
+    // In a real app, send an email here
+    return { success: true };
+  },
+
+  async resetPassword(data: { email: string; token: string; newPassword: string }) {
+    const normalizedEmail = data.email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+    
+    if (!user || !user.resetPasswordToken || !user.resetPasswordExpires) {
+      return { error: 'Code invalide ou expiré' };
+    }
+
+    if (user.resetPasswordToken !== data.token || user.resetPasswordExpires < new Date()) {
+      return { error: 'Code invalide ou expiré' };
+    }
+
+    // Reset password
+    user.password = await bcrypt.hash(data.newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    return { success: true };
   }
 };

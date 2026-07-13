@@ -26,3 +26,12 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8, 'Le nouveau mot de passe doit contenir au moins 8 caractères')
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email()
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  token: z.string().min(6).max(6),
+  newPassword: z.string().min(8, 'Le nouveau mot de passe doit contenir au moins 8 caractères')
+});

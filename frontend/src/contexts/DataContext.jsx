@@ -146,11 +146,10 @@ export function DataProvider({ children }) {
     const workItems = projectTasks.filter(t => !parentIds.has(t.id));
 
     const total = workItems.length;
-    // Backend statuses: A_FAIRE | EN_COURS | BLOQUE | TERMINE
-    const completed = workItems.filter(t => t.status === 'TERMINE').length;
-    const overdue = workItems.filter(t => t.status !== 'TERMINE' && t.dueDate && new Date(t.dueDate) < new Date()).length;
-    const blocked = workItems.filter(t => t.status === 'BLOQUE').length;
-    const inProgress = workItems.filter(t => t.status === 'EN_COURS').length;
+    const completed = workItems.filter(t => t.status === 'Done').length;
+    const overdue = workItems.filter(t => t.status !== 'Done' && t.dueDate && new Date(t.dueDate) < new Date()).length;
+    const blocked = workItems.filter(t => t.status === 'Blocked').length;
+    const inProgress = workItems.filter(t => t.status === 'In Progress').length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, completed, overdue, blocked, inProgress, percent };
   }, [tasks]);
@@ -160,9 +159,8 @@ export function DataProvider({ children }) {
     const parentIds = new Set(tasks.map(t => t.parentId).filter(Boolean));
     const userTasks = tasks.filter(t => t.assignedToUserId === userId && !parentIds.has(t.id));
     const total = userTasks.length;
-    // Backend statuses: A_FAIRE | EN_COURS | BLOQUE | TERMINE
-    const completed = userTasks.filter(t => t.status === 'TERMINE').length;
-    const inProgress = userTasks.filter(t => t.status === 'EN_COURS').length;
+    const completed = userTasks.filter(t => t.status === 'Done').length;
+    const inProgress = userTasks.filter(t => t.status === 'In Progress').length;
     return { total, completed, inProgress };
   }, [tasks]);
 

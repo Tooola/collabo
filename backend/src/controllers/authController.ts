@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { authService } from '../services/authService';
-import { loginSchema, registerSchema, verifyOtpSchema, changePasswordSchema } from '../validation/authSchemas';
+import { loginSchema, registerSchema, verifyOtpSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from '../validation/authSchemas';
 import { env } from '../config/env';
 import { AuthRequest } from '../middlewares/authenticate';
 
@@ -101,5 +101,35 @@ export const authController = {
     const user = authReq.user ? await authService.me(authReq.user.id) : null;
     if (!user) return res.status(401).json({ error: 'Unauthorized', message: 'User not found' });
     res.json({ user });
+  },
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const parsed = forgotPasswordSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Validation Error', message: parsed.error.errors });
+      }
+
+      await authService.forgotPassword(parsed.data.email);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ error: 'Internal Server Error', message: error.message });
+    }
+  },
+
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const parsed = resetPasswordSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Validation Error', message: parsed.error.errors });
+      }
+
+      const result = await authService.resetPassword(parsed.data);
+      if (result.error) return res.status(400).json({ error: 'Bad Request', message: result.error });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ error: 'Internal Server Error', message: error.message });
+    }
   }
 };

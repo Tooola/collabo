@@ -9,6 +9,8 @@ export interface IUser extends Document {
   workspaceId: mongoose.Types.ObjectId;
   otpCode?: string;
   otpExpiresAt?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,7 +24,9 @@ const userSchema = new Schema<IUser>(
     teamId: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
     workspaceId: { type: Schema.Types.ObjectId, required: true },
     otpCode: { type: String, default: null },
-    otpExpiresAt: { type: Date, default: null }
+    otpExpiresAt: { type: Date, default: null },
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null }
   },
   {
     timestamps: true,

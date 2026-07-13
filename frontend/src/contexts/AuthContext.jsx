@@ -48,8 +48,20 @@ export function AuthProvider({ children }) {
     return user && roles.includes(user.role);
   }, [user]);
 
+  const forgotPassword = useCallback(async (email) => {
+    const res = await api('POST', '/forgot-password', { email });
+    if (!res.ok) return { success: false, error: res.data?.message || 'Une erreur est survenue' };
+    return { success: true };
+  }, []);
+
+  const resetPassword = useCallback(async (email, token, newPassword) => {
+    const res = await api('POST', '/reset-password', { email, token, newPassword });
+    if (!res.ok) return { success: false, error: res.data?.message || 'Code invalide ou expiré' };
+    return { success: true };
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, verifyOtp, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, login, verifyOtp, logout, hasRole, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

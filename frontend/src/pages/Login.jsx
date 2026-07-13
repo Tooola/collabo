@@ -54,9 +54,15 @@ export default function Login() {
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  // Forgot / Reset flow
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
 
-  const { login, verifyOtp } = useAuth();
+  const { login, verifyOtp, forgotPassword, resetPassword } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { toggleLanguage, t, language } = useLanguage();
   const navigate = useNavigate();
@@ -74,6 +80,45 @@ export default function Login() {
     setStep('role');
     setSelectedRole(null);
     setError('');
+    setSuccessMsg('');
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) { setError('Veuillez saisir votre adresse e-mail'); return; }
+    setError('');
+    setLoading(true);
+    const result = await forgotPassword(forgotEmail.trim());
+    setLoading(false);
+    if (result.success) {
+      setSuccessMsg(t('login', 'forgotSuccess'));
+    } else {
+      setError(result.error || 'Une erreur est survenue');
+    }
+  };
+
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    if (newPass.length < 8) { setError(t('login', 'resetErrLength')); return; }
+    if (newPass !== confirmPass) { setError(t('login', 'resetErrMatch')); return; }
+    setError('');
+    setLoading(true);
+    const result = await resetPassword(forgotEmail.trim(), resetCode, newPass);
+    setLoading(false);
+    if (result.success) {
+      setSuccessMsg(t('login', 'resetSuccess'));
+      // After 2 seconds go back to login form
+      setTimeout(() => {
+        setStep('form');
+        setSuccessMsg('');
+        setForgotEmail('');
+        setResetCode('');
+        setNewPass('');
+        setConfirmPass('');
+      }, 2000);
+    } else {
+      setError(result.error || 'Code invalide ou expiré');
+    }
   };
 
   const handleSubmitForm = async (e) => {
@@ -245,6 +290,15 @@ export default function Login() {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                    <div className="text-right mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setStep('forgot')}
+                        className="text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+                      >
+                        {t('login', 'forgotPassword')}
+                      </button>
+                    </div>
                   </div>
 
                   <button
@@ -306,6 +360,136 @@ export default function Login() {
                     )}
                   </button>
                 </form>
+              </>
+            )}
+
+            {step === 'forgot' && (
+              <>
+                <button
+                  onClick={() => { setStep('form'); setError(''); setSuccessMsg(''); setForgotEmail(''); }}
+                  className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  {t('login', 'back')}
+                </button>
+
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-1">{t('login', 'forgotTitle')}</h2>
+                  <p className="text-sm text-slate-400">{t('login', 'forgotSubtitle')}</p>
+                </div>
+
+                {error && (
+                  <div className="mb-5 flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+                    <AlertCircle className="h-4 w-4 shrink-0" />{error}
+                  </div>
+                )}
+
+                {successMsg && (
+                  <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-400">
+                    <p className="font-semibold mb-1">{successMsg}</p>
+                    <button
+                      onClick={() => { setSuccessMsg(''); setStep('reset'); }}
+                      className="text-xs text-indigo-400 hover:text-indigo-300 underline"
+                    >
+                      {t('login', 'resetTitle')} →
+                    </button>
+                  </div>
+                )}
+
+                {!successMsg && (
+                  <form onSubmit={handleForgotSubmit} className="space-y-5">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-2">{t('login', 'forgotEmailLabel')}</label>
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="user@example.com"
+                        autoFocus
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-3 rounded-xl font-bold text-white text-sm transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg hover:shadow-indigo-500/25 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : t('login', 'forgotSendCode')}
+                    </button>
+                  </form>
+                )}
+              </>
+            )}
+
+            {step === 'reset' && (
+              <>
+                <button
+                  onClick={() => { setStep('forgot'); setError(''); setSuccessMsg(''); }}
+                  className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  {t('login', 'back')}
+                </button>
+
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-1">{t('login', 'resetTitle')}</h2>
+                  <p className="text-sm text-slate-400">{t('login', 'resetSubtitle')}</p>
+                </div>
+
+                {error && (
+                  <div className="mb-5 flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+                    <AlertCircle className="h-4 w-4 shrink-0" />{error}
+                  </div>
+                )}
+
+                {successMsg && (
+                  <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-sm text-emerald-400">
+                    {successMsg}
+                  </div>
+                )}
+
+                {!successMsg && (
+                  <form onSubmit={handleResetSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-2">{t('login', 'resetCodeLabel')}</label>
+                      <input
+                        type="text"
+                        value={resetCode}
+                        onChange={(e) => setResetCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                        placeholder="123456"
+                        autoFocus
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-center tracking-[0.5em] text-2xl font-mono focus:outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-2">{t('login', 'resetNewPassLabel')}</label>
+                      <input
+                        type="password"
+                        value={newPass}
+                        onChange={(e) => setNewPass(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-2">{t('login', 'resetConfirmPassLabel')}</label>
+                      <input
+                        type="password"
+                        value={confirmPass}
+                        onChange={(e) => setConfirmPass(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading || resetCode.length < 6}
+                      className="w-full py-3 rounded-xl font-bold text-white text-sm transition-all duration-200 flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg hover:shadow-indigo-500/25 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : t('login', 'resetConfirm')}
+                    </button>
+                  </form>
+                )}
               </>
             )}
           </div>
