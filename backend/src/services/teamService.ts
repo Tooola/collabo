@@ -65,12 +65,24 @@ export const teamService = {
   },
 
   async addMember(teamId: string, userId: string, role?: string) {
+    const user = await User.findById(userId);
+    if (!user) return null;
+
     const updateData: any = { teamId };
-    if (role) {
+    if (role && user.role !== 'ADMIN') {
       const parsedRole = roleFromClient(role);
-      if (parsedRole) updateData.role = parsedRole;
+      if (parsedRole) {
+        if (parsedRole === 'LEAD') {
+          const existingLead = await User.findOne({ teamId, role: 'LEAD' });
+          if (existingLead && existingLead._id.toString() !== userId) {
+            await User.findByIdAndUpdate(existingLead._id, { $set: { role: 'DEV' } });
+          }
+        }
+        updateData.role = parsedRole;
+      }
     }
-    const member = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
+    const member = await User.findByIdAndUpdate(userId, { $set: updateData }, { new: true });
     return member ? formatUser(member) : null;
   },
 

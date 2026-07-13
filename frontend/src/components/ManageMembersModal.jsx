@@ -44,9 +44,24 @@ export default function ManageMembersModal({ open, onClose, team }) {
     setSaving(false);
   };
 
+  const handleRoleChange = async (userId, newRole) => {
+    setSaving(true);
+    await addTeamMember(team.id, userId, newRole);
+    await loadMembers();
+    setSaving(false);
+  };
+
   if (!open || !team) return null;
 
   const unassigned = allUsers.filter(u => !members.find(m => m.id === u.id));
+  const hasLead = members.some(m => m.role === 'lead');
+
+  // Reset selectedRole to dev if a lead is added/exists and selectedRole was lead
+  useEffect(() => {
+    if (hasLead && selectedRole === 'lead') {
+      setSelectedRole('dev');
+    }
+  }, [hasLead, selectedRole]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -73,9 +88,21 @@ export default function ManageMembersModal({ open, onClose, team }) {
                     <p className="text-xs text-gray-500">{member.email}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs capitalize text-gray-600">
-                      {member.role}
-                    </span>
+                    {member.role === 'admin' ? (
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs capitalize text-gray-600">
+                        Admin
+                      </span>
+                    ) : (
+                      <select
+                        value={member.role}
+                        onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                        disabled={saving}
+                        className="rounded-md border-gray-300 bg-gray-50 text-xs py-1 pl-2 pr-6 focus:border-primary-500 focus:ring-primary-500 capitalize"
+                      >
+                        <option value="dev">Dev</option>
+                        <option value="lead">Lead</option>
+                      </select>
+                    )}
                     <button
                       onClick={() => handleRemove(member.id)}
                       disabled={saving}
@@ -95,7 +122,7 @@ export default function ManageMembersModal({ open, onClose, team }) {
           {unassigned.length === 0 ? (
             <p className="text-sm text-gray-400">All users are already members</p>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <select
                 value={selectedUserId}
                 onChange={e => setSelectedUserId(e.target.value)}
@@ -106,21 +133,25 @@ export default function ManageMembersModal({ open, onClose, team }) {
                   <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                 ))}
               </select>
-              <select
-                value={selectedRole}
-                onChange={e => setSelectedRole(e.target.value)}
-                className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="dev">Developer</option>
-                <option value="lead">Lead</option>
-              </select>
-              <button
-                onClick={handleAdd}
-                disabled={saving || !selectedUserId}
-                className="flex items-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-              >
-                <UserPlus className="h-4 w-4" />
-              </button>
+              <div className="flex gap-2 sm:flex-none">
+                <select
+                  value={selectedRole}
+                  onChange={e => setSelectedRole(e.target.value)}
+                  className="flex-1 sm:flex-none rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                >
+                  <option value="dev">Developer</option>
+                  <option value="lead" disabled={hasLead}>
+                    Lead {hasLead ? '(Already exists)' : ''}
+                  </option>
+                </select>
+                <button
+                  onClick={handleAdd}
+                  disabled={saving || !selectedUserId}
+                  className="flex items-center justify-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  <UserPlus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
         </div>
