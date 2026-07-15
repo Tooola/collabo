@@ -10,7 +10,7 @@ import { Plus, Trash2, Edit, FolderKanban } from 'lucide-react';
 export default function Projects() {
   const { hasRole } = useAuth();
   const { t } = useLanguage();
-  const { projects, fetchProjects, fetchTeams, deleteProject, getProjectStats } = useData();
+  const { projects, teams, fetchProjects, fetchTeams, deleteProject, getProjectStats } = useData();
   const [showForm, setShowForm] = useState(false);
   const [editProject, setEditProject] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -55,6 +55,7 @@ export default function Projects() {
             <thead className="border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
               <tr>
                 <th className="px-6 py-3 font-medium text-gray-500 dark:text-slate-400">{t('projects', 'project')}</th>
+                <th className="px-6 py-3 font-medium text-gray-500 dark:text-slate-400">Team</th>
                 <th className="px-6 py-3 font-medium text-gray-500 dark:text-slate-400">{t('projects', 'status')}</th>
                 <th className="px-6 py-3 font-medium text-gray-500 dark:text-slate-400">{t('projects', 'progress')}</th>
                 <th className="px-6 py-3 font-medium text-gray-500 dark:text-slate-400">{t('projects', 'tasks')}</th>
@@ -72,6 +73,11 @@ export default function Projects() {
                         {project.name}
                       </a>
                       <p className="mt-0.5 max-w-xs truncate text-xs text-gray-500 dark:text-slate-400">{project.description}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-400 ring-1 ring-inset ring-indigo-700/10 dark:ring-indigo-500/20">
+                        {teams.find(t => t.id === project.teamId)?.name || 'No Team'}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -25,7 +25,11 @@ function RoleBadge({ role }) {
 export default function Profile() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const { teams, updateUser } = useData();
+  const { teams, fetchTeams, updateUser } = useData();
+
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
   
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passError, setPassError] = useState('');
@@ -36,7 +40,11 @@ export default function Profile() {
   const [nameSuccess, setNameSuccess] = useState('');
   const [nameLoading, setNameLoading] = useState(false);
 
-  const teamName = user?.teamId ? teams.find(t => t.id === user.teamId)?.name : t('profile', 'noTeam');
+  const userTeams = user?.teams || [];
+  const teamBadges = userTeams.map(ut => {
+    const team = teams.find(t => t.id === ut.teamId);
+    return { name: team?.name || 'Unknown Team', role: ut.role };
+  });
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
@@ -102,9 +110,17 @@ export default function Profile() {
               
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                 <RoleBadge role={user.role} />
-                <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
-                  {teamName}
-                </span>
+                {teamBadges.length > 0 ? (
+                  teamBadges.map((tb, i) => (
+                    <span key={i} className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      {tb.name} <span className="ml-1 opacity-70">({tb.role})</span>
+                    </span>
+                  ))
+                ) : (
+                  <span className="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    {t('profile', 'noTeam')}
+                  </span>
+                )}
               </div>
             </div>
           </div>

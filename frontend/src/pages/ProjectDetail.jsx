@@ -15,7 +15,7 @@ const STATUS_FILTERS = ['All', 'To Do', 'In Progress', 'Blocked', 'Done'];
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const {
     projects, tasks, fetchTasks, fetchProjects, deleteProject, deleteTask,
     getProjectStats, fetchTeamMembers,
@@ -73,6 +73,22 @@ export default function ProjectDetail() {
   if (!project) return <div className="text-center text-gray-500">Project not found</div>;
 
   const stats = getProjectStats(project.id);
+
+  // Determine if user can write tasks in THIS project:
+  // - ADMIN: always yes
+  // - Otherwise: check the user's role INSIDE the team that owns this project
+  //   → LEAD in the team = can write | DEV in the team = buttons grayed
+  const userRole = user?.role?.toLowerCase();
+  let canWriteTasks = false;
+
+  if (userRole === 'admin') {
+    canWriteTasks = true;
+  } else if (project?.teamId) {
+    const teamEntry = (user?.teams || []).find(t => t.teamId === project.teamId);
+    if (teamEntry) {
+      canWriteTasks = teamEntry.role?.toLowerCase() === 'lead';
+    }
+  }
 
   return (
     <div>
@@ -155,24 +171,34 @@ export default function ProjectDetail() {
             </button>
           ))}
         </div>
-        {hasRole('admin', 'lead') && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 rounded-md border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
-            >
-              <Upload className="h-4 w-4" />
-              Import
-            </button>
-            <button
-              onClick={() => { setEditTask(null); setShowTaskForm(true); }}
-              className="flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
-            >
-              <Plus className="h-4 w-4" />
-              Add Task
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => canWriteTasks && setShowImportModal(true)}
+            disabled={!canWriteTasks}
+            title={!canWriteTasks ? "Action non autorisée. Veuillez informer votre Lead." : ""}
+            className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+              canWriteTasks 
+                ? "border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700"
+                : "border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 text-gray-400 dark:text-slate-600 cursor-not-allowed opacity-60"
+            }`}
+          >
+            <Upload className="h-4 w-4" />
+            Import
+          </button>
+          <button
+            onClick={() => { if(canWriteTasks) { setEditTask(null); setShowTaskForm(true); } }}
+            disabled={!canWriteTasks}
+            title={!canWriteTasks ? "Action non autorisée. Veuillez informer votre Lead." : ""}
+            className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              canWriteTasks
+                ? "bg-primary-600 text-white hover:bg-primary-700"
+                : "bg-primary-300 dark:bg-primary-900/50 text-white/70 cursor-not-allowed opacity-60"
+            }`}
+          >
+            <Plus className="h-4 w-4" />
+            Add Task
+          </button>
+        </div>
       </div>
 
       <TaskBoard

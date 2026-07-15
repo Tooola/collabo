@@ -14,7 +14,7 @@ export const authService = {
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) return null;
 
-    // Validate role
+    // Validate role: strictly use base user.role
     if (requestedRole) {
       const dbRole = roleFromClient(requestedRole) ?? 'DEV';
       if (user.role !== dbRole) {
