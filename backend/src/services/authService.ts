@@ -69,7 +69,7 @@ export const authService = {
     await user.save();
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, teamId: user.teamId?.toString() || null, workspaceId: user.workspaceId.toString() },
+      { id: user.id, email: user.email, role: user.role, teamRole: user.teamRole || 'DEV', teamId: user.teamId?.toString() || null, workspaceId: user.workspaceId.toString() },
       env.jwtSecret,
       { expiresIn: '7d' }
     );

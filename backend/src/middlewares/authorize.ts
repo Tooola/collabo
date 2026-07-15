@@ -29,7 +29,7 @@ export const authorizeTaskAccess = async (req: AuthRequest, res: Response, next:
     
     if (user.role === 'ADMIN') return next();
     
-    if (user.role === 'LEAD') {
+    if (user.role === 'LEAD' || user.teamRole === 'LEAD') {
       const project: any = task.populated('projectId') ? task.projectId : await Project.findById(task.projectId);
       if (project?.teamId?.toString() === user.teamId) return next();
       return res.status(403).json({ error: 'Forbidden', message: 'Access to this task is restricted to your team' });

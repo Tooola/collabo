@@ -7,6 +7,7 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     role: string;
+    teamRole: string;
     teamId: string | null;
     workspaceId: string;
   };
@@ -24,6 +25,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
       id: string;
       email: string;
       role: string;
+      teamRole: string;
       teamId: string | null;
       workspaceId: string;
     };

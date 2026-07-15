@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   password?: string;
   role: 'ADMIN' | 'LEAD' | 'DEV';
+  teamRole?: 'LEAD' | 'DEV';
   teamId?: mongoose.Types.ObjectId;
   workspaceId: mongoose.Types.ObjectId;
   otpCode?: string;
@@ -21,6 +22,7 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
     role: { type: String, enum: ['ADMIN', 'LEAD', 'DEV'], default: 'DEV' },
+    teamRole: { type: String, enum: ['LEAD', 'DEV'], default: 'DEV' },
     teamId: { type: Schema.Types.ObjectId, ref: 'Team', default: null },
     workspaceId: { type: Schema.Types.ObjectId, required: true },
     otpCode: { type: String, default: null },

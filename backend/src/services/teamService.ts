@@ -73,12 +73,12 @@ export const teamService = {
       const parsedRole = roleFromClient(role);
       if (parsedRole) {
         if (parsedRole === 'LEAD') {
-          const existingLead = await User.findOne({ teamId, role: 'LEAD' });
+          const existingLead = await User.findOne({ teamId, teamRole: 'LEAD' });
           if (existingLead && existingLead._id.toString() !== userId) {
-            await User.findByIdAndUpdate(existingLead._id, { $set: { role: 'DEV' } });
+            await User.findByIdAndUpdate(existingLead._id, { $set: { teamRole: 'DEV' } });
           }
         }
-        updateData.role = parsedRole;
+        updateData.teamRole = parsedRole;
       }
     }
 

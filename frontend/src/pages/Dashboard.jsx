@@ -211,7 +211,7 @@ export default function Dashboard() {
                               </div>
                               <div>
                                 <p className="text-sm font-bold text-slate-900 dark:text-white">{member.name}</p>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-0.5">{member.role}</p>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-0.5">{member.role === 'admin' ? 'Admin' : member.teamRole}</p>
                               </div>
                             </div>
                             <div className="flex gap-3 text-xs font-semibold">

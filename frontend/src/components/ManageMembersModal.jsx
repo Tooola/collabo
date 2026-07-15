@@ -52,7 +52,7 @@ export default function ManageMembersModal({ open, onClose, team }) {
   };
 
   const unassigned = allUsers.filter(u => !members.find(m => m.id === u.id));
-  const hasLead = members.some(m => m.role === 'lead');
+  const hasLead = members.some(m => m.teamRole === 'lead');
 
   // Reset selectedRole to dev if a lead is added/exists and selectedRole was lead
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function ManageMembersModal({ open, onClose, team }) {
                       </span>
                     ) : (
                       <select
-                        value={member.role}
+                        value={member.teamRole}
                         onChange={(e) => handleRoleChange(member.id, e.target.value)}
                         disabled={saving}
                         className="rounded-md border-gray-300 bg-gray-50 text-xs py-1 pl-2 pr-6 focus:border-primary-500 focus:ring-primary-500 capitalize"
