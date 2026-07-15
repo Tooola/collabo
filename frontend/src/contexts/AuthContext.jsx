@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password, role) => {
     const res = await api('POST', '/login', { email, password, role });
-    if (!res.ok) return { success: false, error: res.data.error || res.data.message };
+    if (!res.ok) return { success: false, error: res.data.message || res.data.error };
     if (res.data.requireOtp) return { requireOtp: true };
     setAuthToken(res.data.token);
     setUser(res.data.user);
@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
 
   const verifyOtp = useCallback(async (email, password, role, otp) => {
     const res = await api('POST', '/verify-otp', { email, password, role, otp });
-    if (!res.ok) return { success: false, error: res.data.error || res.data.message };
+    if (!res.ok) return { success: false, error: res.data.message || res.data.error };
     setAuthToken(res.data.token);
     setUser(res.data.user);
     return { success: true };

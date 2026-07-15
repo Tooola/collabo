@@ -48,7 +48,7 @@ export default function Register() {
           setError(loginResult.error || 'Erreur lors de la connexion automatique');
         }
       } else {
-        setError(res.data?.error || res.data?.message || 'Erreur lors de la création du compte');
+        setError(res.data?.message || res.data?.error || 'Erreur lors de la création du compte');
       }
     } catch (err) {
       setError('Erreur réseau');

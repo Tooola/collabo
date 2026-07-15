@@ -9,6 +9,8 @@ const routeMap = {
   '/verify-otp': '/auth/verify-otp',
   '/change-password': '/auth/change-password',
   '/register': '/auth/register',
+  '/forgot-password': '/auth/forgot-password',
+  '/reset-password': '/auth/reset-password',
 };
 
 export function setAuthToken(token) {

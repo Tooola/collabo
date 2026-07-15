@@ -91,7 +91,8 @@ export default function Login() {
     const result = await forgotPassword(forgotEmail.trim());
     setLoading(false);
     if (result.success) {
-      setSuccessMsg(t('login', 'forgotSuccess'));
+      // Navigate directly to the reset form — no intermediate screen
+      setStep('reset');
     } else {
       setError(result.error || 'Une erreur est survenue');
     }

@@ -22,7 +22,7 @@ export const errorHandler = (err: Error, _req: Request, res: Response, _next: Ne
 
   // Handle Mongoose duplicate key error
   if ((err as any).code === 11000) {
-    return res.status(409).json({ error: 'Conflict', message: 'Duplicate field value entered' });
+    return res.status(409).json({ error: 'Conflict', message: 'Cet email est déjà utilisé' });
   }
 
   return res.status(500).json({ error: 'Internal Server Error', message: err.message || 'Something went wrong' });

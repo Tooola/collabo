@@ -14,7 +14,7 @@ export const authController = {
 
       const result = await authService.login(parsed.data.email, parsed.data.password, parsed.data.role);
       if (!result) {
-        return res.status(401).json({ error: 'Unauthorized', message: 'Invalid credentials' });
+        return res.status(401).json({ error: 'Unauthorized', message: 'Email ou mot de passe incorrect' });
       }
 
       if (result.error) {
@@ -41,7 +41,7 @@ export const authController = {
 
       const result = await authService.verifyOtp(parsed.data);
       if (!result) {
-        return res.status(401).json({ error: 'Unauthorized', message: 'Invalid credentials' });
+        return res.status(401).json({ error: 'Unauthorized', message: 'Email ou mot de passe incorrect' });
       }
 
       if (result.error) {

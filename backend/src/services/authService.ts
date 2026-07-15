@@ -127,7 +127,10 @@ export const authService = {
     console.log(`🔄 CODE DE RÉINITIALISATION pour ${user.email} : ${resetCode}`);
     console.log(`\n=========================================\n`);
 
-    // In a real app, send an email here
+    // Send the email
+    const emailHtml = buildOtpEmailHtml(resetCode);
+    await sendEmail(user.email, 'Code de réinitialisation - GestPro', emailHtml);
+
     return { success: true };
   },
 
