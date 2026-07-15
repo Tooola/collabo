@@ -6,6 +6,7 @@ export default function ImportTasksModal({ open, onClose, projectId }) {
   const { createTask } = useData();
   const [tasksText, setTasksText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [apiError, setApiError] = useState('');
   const [preview, setPreview] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef(null);
@@ -50,10 +51,12 @@ export default function ImportTasksModal({ open, onClose, projectId }) {
     if (!tasksText.trim()) return;
 
     setSaving(true);
+    setApiError('');
     const items = parseHierarchy(tasksText);
 
     // We need to track the ID of last created tasks at each level
     const parentIds = { 0: null, 1: null, 2: null };
+    let hasError = false;
 
     for (const item of items) {
       const parentId = item.level === 0 ? null : parentIds[item.level - 1];
@@ -70,14 +73,21 @@ export default function ImportTasksModal({ open, onClose, projectId }) {
 
       if (res.ok && res.data?.task?.id) {
         parentIds[item.level] = res.data.task.id;
+      } else if (!res.ok) {
+        setApiError(res.data?.message || res.data?.error || "Une erreur est survenue lors de l'importation.");
+        hasError = true;
+        break;
       }
     }
 
     setSaving(false);
-    setTasksText('');
-    setPreview([]);
-    setShowPreview(false);
-    onClose();
+    
+    if (!hasError) {
+      setTasksText('');
+      setPreview([]);
+      setShowPreview(false);
+      onClose();
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -133,6 +143,12 @@ export default function ImportTasksModal({ open, onClose, projectId }) {
 -- Maquette contact        ← Sous-tâche
 - Développer le backend    ← Tâche`}</pre>
         </div>
+
+        {apiError && (
+          <div className="mb-4 shrink-0 rounded-md bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
+            ⚠️ {apiError}
+          </div>
+        )}
 
         <form onSubmit={handleImport} className="flex-1 flex flex-col overflow-hidden space-y-4">
           {/* Text input */}

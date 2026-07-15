@@ -10,6 +10,7 @@ export default function TaskFormModal({ open, onClose, task, projectId, teamMemb
     title: '', description: '', dueDate: '', status: 'To Do', assignedToUserId: '', projectId, parentId: null,
   });
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function TaskFormModal({ open, onClose, task, projectId, teamMemb
       });
     }
     setErrors({});
+    setApiError('');
   }, [task, open, parentTask]);
 
   const validate = () => {
@@ -49,13 +51,19 @@ export default function TaskFormModal({ open, onClose, task, projectId, teamMemb
     e.preventDefault();
     if (!validate()) return;
     setSaving(true);
+    setApiError('');
     const payload = { ...form, projectId };
+    let res;
     if (task) {
-      await updateTask(task.id, payload);
+      res = await updateTask(task.id, payload);
     } else {
-      await createTask(payload);
+      res = await createTask(payload);
     }
     setSaving(false);
+    if (!res.ok) {
+      setApiError(res.data?.message || res.data?.error || 'Une erreur est survenue.');
+      return;
+    }
     onClose();
   };
 
@@ -80,6 +88,11 @@ export default function TaskFormModal({ open, onClose, task, projectId, teamMemb
           </button>
         </div>
 
+        {apiError && (
+          <div className="mb-3 rounded-md bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
+            ⚠️ {apiError}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Title *</label>

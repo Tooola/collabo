@@ -59,7 +59,7 @@ export const teamService = {
   },
 
   async update(id: string, data: { name?: string; description?: string }) {
-    const team = await Team.findByIdAndUpdate(id, data, { new: true });
+    const team = await Team.findByIdAndUpdate(id, data, { returnDocument: 'after' });
     return team ? formatTeam(team) : null;
   },
 
@@ -114,7 +114,7 @@ export const teamService = {
     const member = await User.findByIdAndUpdate(
       userId,
       { $pull: { teams: { teamId } } } as any,
-      { new: true }
+      { returnDocument: 'after' }
     );
     return member ? formatUser(member) : null;
   },

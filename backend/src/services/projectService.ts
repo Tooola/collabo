@@ -48,7 +48,7 @@ export const projectService = {
       if (s) updateData.status = s;
     }
 
-    const project = await Project.findByIdAndUpdate(id, updateData, { new: true }).populate('teamId');
+    const project = await Project.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }).populate('teamId');
     return project ? formatProject(project) : null;
   },
 

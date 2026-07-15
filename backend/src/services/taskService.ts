@@ -90,7 +90,7 @@ export const taskService = {
       if (s) updateData.status = s;
     }
 
-    const task = await Task.findByIdAndUpdate(id, updateData, { new: true }).populate('assignedTo');
+    const task = await Task.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }).populate('assignedTo');
     if (!task) throw notFound('Task not found');
     return formatTask({ ...task.toJSON(), assignedToUser: task.populated('assignedTo') ? (task as any).assignedTo : null });
   },
@@ -103,7 +103,9 @@ export const taskService = {
       throw forbidden('You can only update your own assigned tasks');
     }
 
-    const project = existing.populated('projectId') ? (existing as any).projectId : await Project.findById(existing.projectId);
+    const project: any = existing.projectId && typeof existing.projectId === 'object' && (existing.projectId as any).name
+      ? existing.projectId
+      : await Project.findById(existing.projectId);
     
     // Check if user is a member of the project's team (either DEV or LEAD)
     const userTeams = req.user?.teams || [];
@@ -116,7 +118,7 @@ export const taskService = {
     const nextStatus = taskStatusFromClient(status);
     if (!nextStatus) throw badRequest('Invalid task status');
 
-    const task = await Task.findByIdAndUpdate(id, { status: nextStatus }, { new: true }).populate('assignedTo');
+    const task = await Task.findByIdAndUpdate(id, { status: nextStatus }, { returnDocument: 'after' }).populate('assignedTo');
     if (!task) throw notFound('Task not found');
     return formatTask({ ...task.toJSON(), assignedToUser: task.populated('assignedTo') ? (task as any).assignedTo : null });
   },

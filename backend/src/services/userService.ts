@@ -58,17 +58,15 @@ export const userService = {
   },
 
 
-  async update(id: string, data: { name?: string; email?: string; password?: string; role?: string; teamId?: string | null }) {
+  async update(id: string, data: { name?: string; email?: string; password?: string; role?: string }) {
     const updateData: Record<string, any> = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.email !== undefined) updateData.email = data.email;
     if (data.role !== undefined) updateData.role = roleFromClient(data.role);
-    if (data.teamId !== undefined) {
-      updateData.teams = data.teamId ? [{ teamId: data.teamId, role: 'DEV' }] : [];
-    }
     if (data.password !== undefined) updateData.password = await bcrypt.hash(data.password, 10);
+    // NOTE: team memberships are managed via /teams/:id/members — never overwrite here
 
-    const user = await User.findByIdAndUpdate(id, updateData, { new: true });
+    const user = await User.findByIdAndUpdate(id, updateData, { returnDocument: 'after' });
     return user ? formatUser(user) : null;
   },
 
