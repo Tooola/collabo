@@ -103,7 +103,7 @@ export default function Teams() {
                     {members.slice(0, 4).map(m => (
                       <div key={m.id} className="flex items-center justify-between rounded bg-gray-50 dark:bg-slate-800 px-3 py-1.5">
                         <span className="text-sm text-gray-700 dark:text-slate-300">{m.name}</span>
-                        <span className="text-xs capitalize text-gray-400 dark:text-slate-500">{m.role === 'admin' ? 'Admin' : m.teamRole}</span>
+                        <span className="text-xs capitalize text-gray-400 dark:text-slate-500">{m.role === 'admin' ? 'Admin' : (m.teams?.find(t => t.teamId === team.id)?.role || m.teamRole || 'dev')}</span>
                       </div>
                     ))}
                     {members.length > 4 && (

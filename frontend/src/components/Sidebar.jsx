@@ -78,7 +78,12 @@ export default function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name}</p>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 capitalize">{user?.role?.toLowerCase()}</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 capitalize">
+              {user?.role?.toLowerCase()}
+              {user?.role !== 'admin' && user?.role !== 'lead' && (user?.teams || []).some(t => t.role === 'lead') && (
+                <span className="ml-1 text-indigo-400">· Team Lead</span>
+              )}
+            </p>
           </div>
         </div>
         <button

@@ -12,8 +12,16 @@ export function AuthProvider({ children }) {
     if (token) {
       setAuthToken(token);
       api('GET', '/me').then(res => {
-        if (res.ok) setUser(res.data.user);
-        else { setAuthToken(null); setUser(null); }
+        if (res.ok) {
+          setUser(res.data.user);
+          // /me now returns a fresh token with up-to-date teams — store it
+          if (res.data.token) {
+            setAuthToken(res.data.token);
+          }
+        } else {
+          setAuthToken(null);
+          setUser(null);
+        }
         setLoading(false);
       });
     } else {
@@ -44,8 +52,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const isTeamLead = useCallback(() => {
+    return user && (user.role === 'lead' || (user.teams || []).some(t => t.role === 'lead'));
+  }, [user]);
+
   const hasRole = useCallback((...roles) => {
-    return user && roles.includes(user.role);
+    if (!user) return false;
+    if (roles.includes(user.role)) return true;
+    // A DEV who is a team lead also matches 'lead'
+    if (roles.includes('lead') && (user.teams || []).some(t => t.role === 'lead')) return true;
+    return false;
   }, [user]);
 
   const forgotPassword = useCallback(async (email) => {
@@ -61,7 +77,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, verifyOtp, logout, hasRole, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, login, verifyOtp, logout, hasRole, isTeamLead, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

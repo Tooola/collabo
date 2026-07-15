@@ -10,33 +10,44 @@ export const teamService = {
   async getAll(req: AuthRequest) {
     const wid = req.user!.workspaceId;
 
-    if (req.user?.role !== 'ADMIN' && !req.user?.teamId) return [];
+    if (req.user?.role === 'ADMIN') {
+      const teams = await Team.find({ workspaceId: wid }).sort({ createdAt: 1 });
+      const results = [];
+      for (const team of teams) {
+        const usersCount = await User.countDocuments({ 'teams.teamId': team._id, workspaceId: wid });
+        const projectsCount = await Project.countDocuments({ teamId: team._id, workspaceId: wid });
+        results.push(formatTeam({ ...team.toJSON(), memberCount: usersCount, projectCount: projectsCount }));
+      }
+      return results;
+    }
 
-    const query: any = { workspaceId: wid };
-    if (req.user?.role !== 'ADMIN') query._id = req.user!.teamId;
+    // Non-admins: use JWT teams array (always fresh after page load via /me token refresh)
+    const userTeams: { teamId: string; role: string }[] = req.user?.teams || [];
+    if (userTeams.length === 0) return [];
 
-    const teams = await Team.find(query).sort({ createdAt: 1 });
+    const teamIds = userTeams.map(t => t.teamId);
+    const teams = await Team.find({ _id: { $in: teamIds }, workspaceId: wid }).sort({ createdAt: 1 });
 
     const results = [];
     for (const team of teams) {
-      const usersCount = await User.countDocuments({ teamId: team._id, workspaceId: wid });
+      const usersCount = await User.countDocuments({ 'teams.teamId': team._id, workspaceId: wid });
       const projectsCount = await Project.countDocuments({ teamId: team._id, workspaceId: wid });
       results.push(formatTeam({ ...team.toJSON(), memberCount: usersCount, projectCount: projectsCount }));
     }
-
     return results;
   },
 
   async getById(id: string, req?: AuthRequest) {
-    if (req?.user?.role !== 'ADMIN' && req?.user?.teamId !== id) {
-      throw forbidden('Access to this team is restricted');
+    if (req?.user?.role !== 'ADMIN') {
+      const isMember = (req?.user?.teams || []).some((t: any) => t.teamId === id);
+      if (!isMember) throw forbidden('Access to this team is restricted');
     }
 
     const team = await Team.findById(id);
     if (!team) return null;
 
     const wid = req?.user?.workspaceId;
-    const usersCount = await User.countDocuments({ teamId: id, workspaceId: wid });
+    const usersCount = await User.countDocuments({ 'teams.teamId': id, workspaceId: wid });
     const projectsCount = await Project.countDocuments({ teamId: id, workspaceId: wid });
 
     return formatTeam({ ...team.toJSON(), memberCount: usersCount, projectCount: projectsCount });
@@ -58,7 +69,8 @@ export const teamService = {
 
     await Task.deleteMany({ projectId: { $in: projectIds } });
     await Project.deleteMany({ teamId: id });
-    await User.updateMany({ teamId: id }, { $set: { teamId: null } });
+    // Remove this team from all users' teams arrays
+    await User.updateMany({ 'teams.teamId': id }, { $pull: { teams: { teamId: id } } } as any);
     await Team.findByIdAndDelete(id);
 
     return { success: true };
@@ -68,35 +80,52 @@ export const teamService = {
     const user = await User.findById(userId);
     if (!user) return null;
 
-    const updateData: any = { teamId };
-    if (role && user.role !== 'ADMIN') {
-      const parsedRole = roleFromClient(role);
-      if (parsedRole) {
-        if (parsedRole === 'LEAD') {
-          const existingLead = await User.findOne({ teamId, teamRole: 'LEAD' });
-          if (existingLead && existingLead._id.toString() !== userId) {
-            await User.findByIdAndUpdate(existingLead._id, { $set: { teamRole: 'DEV' } });
-          }
-        }
-        updateData.teamRole = parsedRole;
-      }
+    const parsedRole = role ? (roleFromClient(role) ?? 'DEV') : 'DEV';
+
+    // If assigning LEAD, demote any existing lead in this team first
+    if (parsedRole === 'LEAD') {
+      await User.updateOne(
+        { 'teams.teamId': teamId, 'teams.role': 'LEAD' },
+        { $set: { 'teams.$.role': 'DEV' } }
+      );
     }
 
-    const member = await User.findByIdAndUpdate(userId, { $set: updateData }, { new: true });
+    const hasTeam = user.teams.some((t: any) => t.teamId.toString() === teamId.toString());
+
+    if (hasTeam) {
+      // Already a member — just update their role in this team
+      await User.updateOne(
+        { _id: userId, 'teams.teamId': teamId },
+        { $set: { 'teams.$.role': parsedRole } }
+      );
+    } else {
+      // New member — push new team entry
+      await User.updateOne(
+        { _id: userId },
+        { $push: { teams: { teamId, role: parsedRole } } } as any
+      );
+    }
+
+    const member = await User.findById(userId);
     return member ? formatUser(member) : null;
   },
 
   async removeMember(teamId: string, userId: string) {
-    const member = await User.findByIdAndUpdate(userId, { $set: { teamId: null } }, { new: true });
+    const member = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { teams: { teamId } } } as any,
+      { new: true }
+    );
     return member ? formatUser(member) : null;
   },
 
   async getMembers(teamId: string, req: AuthRequest) {
-    if (req.user?.role !== 'ADMIN' && req.user?.teamId?.toString() !== teamId.toString()) {
-      throw forbidden('Access to this team is restricted');
+    if (req.user?.role !== 'ADMIN') {
+      const isMember = (req.user?.teams || []).some((t: any) => t.teamId.toString() === teamId.toString());
+      if (!isMember) throw forbidden('Access to this team is restricted');
     }
 
-    const members = await User.find({ teamId, workspaceId: req.user!.workspaceId }).sort({ name: 1 });
+    const members = await User.find({ 'teams.teamId': teamId, workspaceId: req.user!.workspaceId }).sort({ name: 1 });
     return members.map(formatUser);
   }
 };

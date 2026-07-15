@@ -31,7 +31,7 @@ export const userService = {
       email: normalizedEmail,
       password: hashedPassword,
       role: dbRole,
-      teamId: data.teamId || null,
+      teams: data.teamId ? [{ teamId: data.teamId, role: 'DEV' }] : [],
       workspaceId: req.user!.workspaceId
     });
 
@@ -63,7 +63,9 @@ export const userService = {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.email !== undefined) updateData.email = data.email;
     if (data.role !== undefined) updateData.role = roleFromClient(data.role);
-    if (data.teamId !== undefined) updateData.teamId = data.teamId || null;
+    if (data.teamId !== undefined) {
+      updateData.teams = data.teamId ? [{ teamId: data.teamId, role: 'DEV' }] : [];
+    }
     if (data.password !== undefined) updateData.password = await bcrypt.hash(data.password, 10);
 
     const user = await User.findByIdAndUpdate(id, updateData, { new: true });

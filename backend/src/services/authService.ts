@@ -69,7 +69,13 @@ export const authService = {
     await user.save();
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, teamRole: user.teamRole || 'DEV', teamId: user.teamId?.toString() || null, workspaceId: user.workspaceId.toString() },
+      { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role, 
+        teams: user.teams.map((t: any) => ({ teamId: t.teamId.toString(), role: t.role })),
+        workspaceId: user.workspaceId.toString() 
+      },
       env.jwtSecret,
       { expiresIn: '7d' }
     );
@@ -101,7 +107,7 @@ export const authService = {
       email: data.email,
       password: hashedPassword,
       role: roleFromClient(data.role) ?? 'DEV',
-      teamId: data.teamId || null,
+      teams: data.teamId ? [{ teamId: data.teamId, role: 'DEV' }] : [],
       workspaceId
     });
     return formatUser(user);
@@ -110,6 +116,25 @@ export const authService = {
   async me(id: string) {
     const user = await User.findById(id);
     return user ? formatUser(user) : null;
+  },
+
+  async refreshToken(id: string) {
+    const user = await User.findById(id);
+    if (!user) return null;
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        teams: user.teams.map((t: any) => ({ teamId: t.teamId.toString(), role: t.role })),
+        workspaceId: user.workspaceId.toString()
+      },
+      env.jwtSecret,
+      { expiresIn: '7d' }
+    );
+
+    return { user: formatUser(user), token };
   },
 
   async forgotPassword(email: string) {

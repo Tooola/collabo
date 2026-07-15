@@ -11,16 +11,20 @@ export const taskService = {
     let query: any = { workspaceId: wid };
 
     if (req.user?.role === 'ADMIN') {
-      // no additional filter - just workspaceId
-    } else if (req.user?.role === 'LEAD') {
-      if (!req.user.teamId) return [];
-      const projects = await Project.find({ teamId: req.user.teamId, workspaceId: wid }, '_id');
-      const projectIds = projects.map(p => p._id);
-      query.projectId = { $in: projectIds };
-    } else if (req.user?.role === 'DEV') {
-      query.assignedTo = req.user.id;
+      // no additional filter
     } else {
-      return [];
+      // Use JWT teams array (always fresh via /me token refresh on page load)
+      const userTeams: { teamId: string; role: string }[] = req.user?.teams || [];
+      const leadTeamIds = userTeams.filter(t => t.role === 'LEAD').map(t => t.teamId);
+
+      if (leadTeamIds.length > 0) {
+        // DEV who is also a team lead: see all tasks from led teams + their own assigned tasks
+        const projects = await Project.find({ teamId: { $in: leadTeamIds }, workspaceId: wid }, '_id');
+        const projectIds = projects.map(p => p._id);
+        query = { workspaceId: wid, $or: [{ assignedTo: req.user!.id }, { projectId: { $in: projectIds } }] };
+      } else {
+        query.assignedTo = req.user!.id;
+      }
     }
 
     const tasks = await Task.find(query).populate('projectId').populate('assignedTo').sort({ createdAt: 1 });
@@ -100,7 +104,12 @@ export const taskService = {
     }
 
     const project = existing.populated('projectId') ? (existing as any).projectId : await Project.findById(existing.projectId);
-    if (req.user?.role === 'LEAD' && project?.teamId?.toString() !== req.user.teamId) {
+    
+    // Check if user is a member of the project's team (either DEV or LEAD)
+    const userTeams = req.user?.teams || [];
+    const teamMember = userTeams.find((t: any) => t.teamId === project?.teamId?.toString());
+    
+    if (req.user?.role !== 'ADMIN' && !teamMember) {
       throw forbidden('You can only update tasks from your team');
     }
 
@@ -120,12 +129,15 @@ export const taskService = {
 
 async function assertLeadCanWriteProject(req: AuthRequest, projectId: string) {
   if (req.user?.role === 'ADMIN') return;
-  if (req.user?.role !== 'LEAD') throw forbidden('Only admin and lead can write tasks');
-  if (!req.user.teamId) throw forbidden('Lead must belong to a team');
 
   const project = await Project.findById(projectId);
   if (!project) throw notFound('Project not found');
-  if (project.teamId.toString() !== req.user.teamId) throw forbidden('You can only write tasks from your team');
+
+  const userTeams = req.user?.teams || [];
+  const teamMember = userTeams.find((t: any) => t.teamId === project.teamId.toString());
+
+  if (!teamMember) throw forbidden('You can only write tasks from your team');
+  if (teamMember.role !== 'LEAD') throw forbidden('Only admin and lead can write tasks');
 }
 
 async function assertAssigneeInProjectTeam(projectId: string, userId: string) {
@@ -133,5 +145,9 @@ async function assertAssigneeInProjectTeam(projectId: string, userId: string) {
   const user = await User.findById(userId);
   if (!project) throw notFound('Project not found');
   if (!user) throw notFound('Assigned user not found');
-  if (user.teamId?.toString() !== project.teamId.toString()) throw badRequest('Assigned user must belong to the project team');
+
+  const userTeams = user.teams || [];
+  const isMember = userTeams.some((t: any) => t.teamId.toString() === project.teamId.toString());
+
+  if (!isMember) throw badRequest('Assigned user must belong to the project team');
 }

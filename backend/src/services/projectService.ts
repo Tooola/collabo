@@ -8,10 +8,14 @@ export const projectService = {
   async getAll(req: AuthRequest) {
     const wid = req.user!.workspaceId;
 
-    if (req.user?.role !== 'ADMIN' && !req.user?.teamId) return [];
+    const userTeams = req.user?.teams || [];
+    if (req.user?.role !== 'ADMIN' && userTeams.length === 0) return [];
 
     const query: any = { workspaceId: wid };
-    if (req.user?.role !== 'ADMIN') query.teamId = req.user!.teamId;
+    if (req.user?.role !== 'ADMIN') {
+      const teamIds = userTeams.map((t: any) => t.teamId);
+      query.teamId = { $in: teamIds };
+    }
 
     const projects = await Project.find(query).populate('teamId').sort({ createdAt: 1 });
     return projects.map(formatProject);
@@ -57,7 +61,9 @@ export const projectService = {
   async assertProjectVisible(user: AuthRequest['user'], projectId: string) {
     const project = await Project.findById(projectId);
     if (!project) throw notFound('Project not found');
-    if (user?.role !== 'ADMIN' && project.teamId.toString() !== user?.teamId) {
+    const userTeams = user?.teams || [];
+    const isMember = userTeams.some((t: any) => t.teamId === project.teamId.toString());
+    if (user?.role !== 'ADMIN' && !isMember) {
       throw forbidden('Access to this project is restricted to your team');
     }
     return project;

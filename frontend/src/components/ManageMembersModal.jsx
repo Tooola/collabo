@@ -20,7 +20,12 @@ export default function ManageMembersModal({ open, onClose, team }) {
   const loadMembers = async () => {
     if (!team) return;
     const res = await fetchTeamMembers(team.id);
-    if (res.ok) setMembers(res.data.members);
+    if (res.ok) {
+      setMembers(res.data.members.map(m => ({
+        ...m,
+        teamRole: m.teams?.find(t => t.teamId === team.id)?.role || 'dev'
+      })));
+    }
   };
 
   const loadAllUsers = async () => {
@@ -147,7 +152,7 @@ export default function ManageMembersModal({ open, onClose, team }) {
                 <button
                   onClick={handleAdd}
                   disabled={saving || !selectedUserId}
-                  className="flex items-center justify-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                  className="flex shrink-0 items-center justify-center gap-1 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
                 >
                   <UserPlus className="h-4 w-4" />
                 </button>

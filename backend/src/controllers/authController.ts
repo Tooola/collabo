@@ -98,9 +98,10 @@ export const authController = {
 
   async me(req: Request, res: Response) {
     const authReq = req as AuthRequest;
-    const user = authReq.user ? await authService.me(authReq.user.id) : null;
-    if (!user) return res.status(401).json({ error: 'Unauthorized', message: 'User not found' });
-    res.json({ user });
+    if (!authReq.user) return res.status(401).json({ error: 'Unauthorized', message: 'User not found' });
+    const result = await authService.refreshToken(authReq.user.id);
+    if (!result) return res.status(401).json({ error: 'Unauthorized', message: 'User not found' });
+    res.json({ user: result.user, token: result.token });
   },
   async forgotPassword(req: Request, res: Response) {
     try {

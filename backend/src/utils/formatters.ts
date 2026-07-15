@@ -66,8 +66,10 @@ export const formatUser = (user: any) => ({
   name: user.name,
   email: user.email,
   role: roleToClient[user.role] || 'dev',
-  teamRole: roleToClient[user.teamRole] || 'dev',
-  teamId: user.teamId?.toString() || null,
+  teams: (user.teams || []).map((t: any) => ({
+    teamId: t.teamId?.toString() || null,
+    role: roleToClient[t.role] || 'dev'
+  })),
   createdAt: formatDate(user.createdAt),
   updatedAt: formatDate(user.updatedAt)
 });

@@ -29,9 +29,12 @@ export const authorizeTaskAccess = async (req: AuthRequest, res: Response, next:
     
     if (user.role === 'ADMIN') return next();
     
-    if (user.role === 'LEAD' || user.teamRole === 'LEAD') {
-      const project: any = task.populated('projectId') ? task.projectId : await Project.findById(task.projectId);
-      if (project?.teamId?.toString() === user.teamId) return next();
+    const project: any = task.populated('projectId') ? task.projectId : await Project.findById(task.projectId);
+    const isTeamMember = user.teams?.some((t: any) => t.teamId === project?.teamId?.toString());
+    const isTeamLead = user.teams?.some((t: any) => t.teamId === project?.teamId?.toString() && t.role === 'LEAD');
+
+    if (user.role === 'LEAD' || isTeamLead) {
+      if (isTeamMember) return next();
       return res.status(403).json({ error: 'Forbidden', message: 'Access to this task is restricted to your team' });
     }
 
@@ -56,7 +59,7 @@ export const authorizeProjectAccess = async (req: AuthRequest, res: Response, ne
     
     if (user.role === 'ADMIN') return next();
     
-    if (project.teamId?.toString() !== user.teamId) {
+    if (!user.teams?.some((t: any) => t.teamId === project.teamId?.toString())) {
       return res.status(403).json({ error: 'Forbidden', message: 'Access to this project is restricted to your team' });
     }
     
