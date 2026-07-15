@@ -51,8 +51,6 @@ export default function ManageMembersModal({ open, onClose, team }) {
     setSaving(false);
   };
 
-  if (!open || !team) return null;
-
   const unassigned = allUsers.filter(u => !members.find(m => m.id === u.id));
   const hasLead = members.some(m => m.role === 'lead');
 
@@ -62,6 +60,8 @@ export default function ManageMembersModal({ open, onClose, team }) {
       setSelectedRole('dev');
     }
   }, [hasLead, selectedRole]);
+
+  if (!open || !team) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
