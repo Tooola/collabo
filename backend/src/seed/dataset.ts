@@ -22,11 +22,13 @@ export interface SeedUserDef {
   email: string;
   name: string;
   role: 'ADMIN' | 'LEAD' | 'DEV';
-  /** `null` for the admin, who belongs to no team by design. */
-  teamKey: string | null;
+  /** Teams this account belongs to. Empty for `admin@test.com` by design. */
+  teamKeys: string[];
   joinedDaysAgo: number;
   /** Relative share of tasks this person receives. Only used for DEVs. */
   load?: number;
+  /** `npm run seed:reset` never deletes an account flagged this way. */
+  protected?: boolean;
 }
 
 export interface SeedProjectDef {
@@ -50,38 +52,51 @@ export const TEAMS: SeedTeamDef[] = [
 
 export const USERS: SeedUserDef[] = [
   // ---------------------------------------------------------------- admin
-  { email: 'admin@test.com', name: 'Admin User', role: 'ADMIN', teamKey: null, joinedDaysAgo: 220 },
+  { email: 'admin@test.com', name: 'Admin User', role: 'ADMIN', teamKeys: [], joinedDaysAgo: 220 },
+
+  // The owner's account. Listed as ADMIN of all five seeded teams so it can
+  // see and manage everything; task assignment skips ADMINs (see buildTasks),
+  // so adding it leaves the generated dataset untouched. `protected` keeps
+  // `seed:reset` from deleting it along with the demo accounts.
+  {
+    email: 'fayomijesutola@gmail.com',
+    name: 'AGBOHI Carlos',
+    role: 'ADMIN',
+    teamKeys: ['frontend', 'backend', 'design', 'qa', 'data'],
+    joinedDaysAgo: 225,
+    protected: true,
+  },
 
   // ---------------------------------------------------------------- leads
-  { email: 'lead@test.com', name: 'Sarah Bennett', role: 'LEAD', teamKey: 'frontend', joinedDaysAgo: 210 },
-  { email: 'lead.backend@test.com', name: 'Marcus Reed', role: 'LEAD', teamKey: 'backend', joinedDaysAgo: 205 },
-  { email: 'lead.design@test.com', name: 'Chloé Martin', role: 'LEAD', teamKey: 'design', joinedDaysAgo: 200 },
-  { email: 'lead.qa@test.com', name: 'Ahmed Diallo', role: 'LEAD', teamKey: 'qa', joinedDaysAgo: 195 },
-  { email: 'lead.data@test.com', name: 'Emma Wilson', role: 'LEAD', teamKey: 'data', joinedDaysAgo: 190 },
+  { email: 'lead@test.com', name: 'Sarah Bennett', role: 'LEAD', teamKeys: ['frontend'], joinedDaysAgo: 210 },
+  { email: 'lead.backend@test.com', name: 'Marcus Reed', role: 'LEAD', teamKeys: ['backend'], joinedDaysAgo: 205 },
+  { email: 'lead.design@test.com', name: 'Chloé Martin', role: 'LEAD', teamKeys: ['design'], joinedDaysAgo: 200 },
+  { email: 'lead.qa@test.com', name: 'Ahmed Diallo', role: 'LEAD', teamKeys: ['qa'], joinedDaysAgo: 195 },
+  { email: 'lead.data@test.com', name: 'Emma Wilson', role: 'LEAD', teamKeys: ['data'], joinedDaysAgo: 190 },
 
   // ------------------------------------------------------------- frontend
   // `dev@test.com` is deliberately overloaded so workload-imbalance
   // charts have something obvious to show.
-  { email: 'dev@test.com', name: 'John Carter', role: 'DEV', teamKey: 'frontend', joinedDaysAgo: 180, load: 3.0 },
-  { email: 'dev.fe2@test.com', name: 'Léa Dupont', role: 'DEV', teamKey: 'frontend', joinedDaysAgo: 150, load: 1.2 },
-  { email: 'dev.fe3@test.com', name: 'Tom Becker', role: 'DEV', teamKey: 'frontend', joinedDaysAgo: 100, load: 0.5 },
+  { email: 'dev@test.com', name: 'John Carter', role: 'DEV', teamKeys: ['frontend'], joinedDaysAgo: 180, load: 3.0 },
+  { email: 'dev.fe2@test.com', name: 'Léa Dupont', role: 'DEV', teamKeys: ['frontend'], joinedDaysAgo: 150, load: 1.2 },
+  { email: 'dev.fe3@test.com', name: 'Tom Becker', role: 'DEV', teamKeys: ['frontend'], joinedDaysAgo: 100, load: 0.5 },
 
   // -------------------------------------------------------------- backend
-  { email: 'dev.be1@test.com', name: 'Sofia Rossi', role: 'DEV', teamKey: 'backend', joinedDaysAgo: 175, load: 1.5 },
-  { email: 'dev.be2@test.com', name: 'Karim Haddad', role: 'DEV', teamKey: 'backend', joinedDaysAgo: 130, load: 1.0 },
-  { email: 'dev.be3@test.com', name: 'Yuki Tanaka', role: 'DEV', teamKey: 'backend', joinedDaysAgo: 90, load: 0.7 },
+  { email: 'dev.be1@test.com', name: 'Sofia Rossi', role: 'DEV', teamKeys: ['backend'], joinedDaysAgo: 175, load: 1.5 },
+  { email: 'dev.be2@test.com', name: 'Karim Haddad', role: 'DEV', teamKeys: ['backend'], joinedDaysAgo: 130, load: 1.0 },
+  { email: 'dev.be3@test.com', name: 'Yuki Tanaka', role: 'DEV', teamKeys: ['backend'], joinedDaysAgo: 90, load: 0.7 },
 
   // --------------------------------------------------------------- design
-  { email: 'dev.design1@test.com', name: 'Nina Kowalski', role: 'DEV', teamKey: 'design', joinedDaysAgo: 170, load: 1.3 },
-  { email: 'dev.design2@test.com', name: 'Lucas Ferreira', role: 'DEV', teamKey: 'design', joinedDaysAgo: 95, load: 0.9 },
+  { email: 'dev.design1@test.com', name: 'Nina Kowalski', role: 'DEV', teamKeys: ['design'], joinedDaysAgo: 170, load: 1.3 },
+  { email: 'dev.design2@test.com', name: 'Lucas Ferreira', role: 'DEV', teamKeys: ['design'], joinedDaysAgo: 95, load: 0.9 },
 
   // ------------------------------------------------------------------- qa
-  { email: 'dev.qa1@test.com', name: 'Aïcha Traoré', role: 'DEV', teamKey: 'qa', joinedDaysAgo: 165, load: 1.4 },
-  { email: 'dev.qa2@test.com', name: 'Oliver Smith', role: 'DEV', teamKey: 'qa', joinedDaysAgo: 80, load: 0.8 },
+  { email: 'dev.qa1@test.com', name: 'Aïcha Traoré', role: 'DEV', teamKeys: ['qa'], joinedDaysAgo: 165, load: 1.4 },
+  { email: 'dev.qa2@test.com', name: 'Oliver Smith', role: 'DEV', teamKeys: ['qa'], joinedDaysAgo: 80, load: 0.8 },
 
   // ----------------------------------------------------------------- data
-  { email: 'dev.data1@test.com', name: 'Priya Sharma', role: 'DEV', teamKey: 'data', joinedDaysAgo: 160, load: 1.6 },
-  { email: 'dev.data2@test.com', name: 'Diego Alvarez', role: 'DEV', teamKey: 'data', joinedDaysAgo: 85, load: 0.5 },
+  { email: 'dev.data1@test.com', name: 'Priya Sharma', role: 'DEV', teamKeys: ['data'], joinedDaysAgo: 160, load: 1.6 },
+  { email: 'dev.data2@test.com', name: 'Diego Alvarez', role: 'DEV', teamKeys: ['data'], joinedDaysAgo: 85, load: 0.5 },
 ];
 
 /**

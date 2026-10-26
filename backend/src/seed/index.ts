@@ -6,11 +6,19 @@ import { Team } from '../models/Team';
 import { User } from '../models/User';
 import { Project } from '../models/Project';
 import { Task } from '../models/Task';
+import { USERS } from './dataset';
 import { buildDataset } from './generate';
 import { isObjectIdHex, seedId } from './utils';
 
 /** Record of the last seed pass. Informational only — not used as a gate. */
 const MARKER_ID = 'demo-v1';
+
+/**
+ * Accounts `seed:reset` must never delete. They sit inside the demo workspace
+ * precisely so they can see the seeded teams — wiping them would also destroy
+ * a password chosen by hand.
+ */
+const PROTECTED_EMAILS = USERS.filter((u) => u.protected).map((u) => u.email);
 
 export interface SeedSummary {
   workspaceId: string;
@@ -84,22 +92,23 @@ function seedsCollection(): SeedsCollection {
  * account created earlier — e.g. by the previous destructive seed — is reused
  * instead of colliding.
  *
- * `workspaceId` and `teams` are enforced on every pass: without that, a user
- * carried over from the old seed would keep an orphan workspace and end up
- * with an empty sidebar. These 18 accounts are owned by the seed; everything
- * else (name, password, role) is insert-only and never overwritten.
+ * Authorization is re-asserted on every pass: without a corrected
+ * `workspaceId`, `teams` and `role`, an account carried over from the old
+ * seed would keep an orphan workspace and end up with an empty sidebar.
+ * Identity and credentials (`name`, `password`, `createdAt`) stay insert-only,
+ * so a password changed after seeding is never reverted.
  */
 async function upsertUsers(users: Record<string, unknown>[]): Promise<void> {
   if (users.length === 0) return;
 
   const ops = users.map((doc) => {
-    const { email, workspaceId, teams, ...insert } = doc;
+    const { email, workspaceId, teams, role, ...insert } = doc;
     return {
       updateOne: {
         filter: { email },
         update: {
           $setOnInsert: insert,
-          $set: { workspaceId, teams },
+          $set: { workspaceId, teams, role },
         },
         upsert: true,
       },
@@ -177,11 +186,9 @@ export async function runSeed(): Promise<SeedSummary | null> {
 }
 
 /**
- * Destroys every user, team, project and task **inside the demo workspace
- * only**, then clears the seed record so the next `runSeed()` starts clean.
- *
- * Accounts that live elsewhere — including the admin created through the
- * registration endpoint — are left untouched.
+ * Destroys every team, project and task **inside the demo workspace only**,
+ * plus the demo accounts — everything except the protected ones, so the
+ * owner's account and its hand-picked password survive a reset.
  *
  * Refuses to run in production — use it locally before `npm run seed`.
  */
@@ -200,14 +207,14 @@ export async function runReset(): Promise<void> {
 
   const tasks = await Task.deleteMany({ workspaceId });
   const projects = await Project.deleteMany({ workspaceId });
-  const users = await User.deleteMany({ workspaceId });
+  const users = await User.deleteMany({ workspaceId, email: { $nin: PROTECTED_EMAILS } });
   const teams = await Team.deleteMany({ workspaceId });
   await seedsCollection().deleteMany({ _id: MARKER_ID });
 
   console.warn(
     `[seed:reset] Removed ${tasks.deletedCount} tasks, ${projects.deletedCount} projects, ` +
     `${users.deletedCount} users, ${teams.deletedCount} teams. ` +
-    'Accounts and data outside this workspace were kept.'
+    `Kept ${PROTECTED_EMAILS.length} protected account(s) and everything outside this workspace.`
   );
   console.warn('[seed:reset] Run `npm run seed` to recreate the demo data.');
 }

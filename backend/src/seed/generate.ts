@@ -66,17 +66,21 @@ function buildTeams(workspaceId: Types.ObjectId, now: number) {
 function buildUsers(workspaceId: Types.ObjectId, passwordHash: string, now: number) {
   return USERS.map((u) => {
     const createdAt = new Date(now - u.joinedDaysAgo * DAY);
+    // The schema's team roles are only LEAD|DEV: everyone who is not a
+    // plain DEV holds LEAD rank inside their teams.
+    const teamRole: 'LEAD' | 'DEV' = u.role === 'DEV' ? 'DEV' : 'LEAD';
     return {
       _id: seedId(`user:${u.email}`),
       name: u.name,
       email: u.email,
       password: passwordHash,
       role: u.role,
-      // The admin owns no team on purpose: it is the only way to exercise
-      // the ADMIN branch of `taskService.getAll`.
-      teams: u.teamKey
-        ? [{ teamId: seedId(`team:${u.teamKey}`), role: u.role === 'LEAD' ? 'LEAD' : 'DEV' }]
-        : [],
+      // The seeded admin owns no team on purpose: it is the only way to
+      // exercise the ADMIN branch of `taskService.getAll`.
+      teams: u.teamKeys.map((key) => ({
+        teamId: seedId(`team:${key}`),
+        role: teamRole,
+      })),
       workspaceId,
       createdAt,
       updatedAt: createdAt,
@@ -105,14 +109,19 @@ function buildTasks(workspaceId: Types.ObjectId, now: number) {
 
   const membersByTeam = new Map<string, Member[]>();
   for (const u of USERS) {
-    if (!u.teamKey) continue;
-    const list = membersByTeam.get(u.teamKey) ?? [];
-    list.push({
-      id: seedId(`user:${u.email}`),
-      role: u.role as 'LEAD' | 'DEV',
-      load: u.load ?? 1,
-    });
-    membersByTeam.set(u.teamKey, list);
+    // ADMINs supervise every team but are never assigned work. This also
+    // keeps the generated dataset byte-identical when an admin account is
+    // added to the teams.
+    if (u.role === 'ADMIN') continue;
+    for (const key of u.teamKeys) {
+      const list = membersByTeam.get(key) ?? [];
+      list.push({
+        id: seedId(`user:${u.email}`),
+        role: u.role as 'LEAD' | 'DEV',
+        load: u.load ?? 1,
+      });
+      membersByTeam.set(key, list);
+    }
   }
 
   PROJECTS.forEach((p, projectIndex) => {

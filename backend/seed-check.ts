@@ -14,13 +14,15 @@ const teamIds = new Set(TEAMS.map((t) => t._id));
 const projIds = new Set(data.projects.map((p) => p._id as Types.ObjectId).map(String));
 const taskIds = new Set(data.tasks.map((t) => t._id as Types.ObjectId).map(String));
 
-// teamKey -> set of user ids
+// teamKey -> set of user ids (mirrors buildTasks: ADMINs are not members)
 const teamMembers = new Map<string, Set<string>>();
 for (const u of USERS) {
-  if (!u.teamKey) continue;
-  const s = teamMembers.get(u.teamKey) ?? new Set<string>();
-  s.add(String(data.users.find((x) => x.email === u.email)!._id));
-  teamMembers.set(u.teamKey, s);
+  if (u.role === 'ADMIN') continue;
+  for (const key of u.teamKeys) {
+    const s = teamMembers.get(key) ?? new Set<string>();
+    s.add(String(data.users.find((x) => x.email === u.email)!._id));
+    teamMembers.set(key, s);
+  }
 }
 // projectId -> teamKey
 const projTeam = new Map<string, string>();
@@ -124,6 +126,25 @@ for (const p of data.projects) {
 
 console.log('\n=== invariants ===');
 const inv: string[] = [];
+
+// The owner account must be a seeded ADMIN across all five teams, flagged
+// protected, and no admin may ever receive a task.
+const OWNER_EMAIL = 'fayomijesutola@gmail.com';
+const owner = data.users.find((u) => u.email === OWNER_EMAIL);
+const ownerDef = USERS.find((u) => u.email === OWNER_EMAIL);
+if (!owner || !ownerDef) {
+  inv.push('owner account missing from the dataset');
+} else {
+  if (owner.role !== 'ADMIN') inv.push(`owner role is ${owner.role}, expected ADMIN`);
+  const n = (owner.teams as unknown[]).length;
+  if (n !== 5) inv.push(`owner belongs to ${n} teams, expected 5`);
+  // `protected` is definition-only metadata and never reaches the document.
+  if (!ownerDef.protected) inv.push('owner is not flagged `protected` — seed:reset would delete it');
+}
+const adminIds = new Set(data.users.filter((u) => u.role === 'ADMIN').map((u) => String(u._id)));
+const toAdmin = data.tasks.filter((t) => t.assignedTo && adminIds.has(String(t.assignedTo)));
+if (toAdmin.length) inv.push(`${toAdmin.length} tasks are assigned to an ADMIN`);
+
 for (const p of PROJECTS) {
   const mine = data.tasks.filter((t) => String(t.projectId) === String(data.projects.find((x) => x.name === p.name)!._id));
   const c: Record<string, number> = {};
