@@ -5,7 +5,7 @@ const zod_1 = require("zod");
 exports.createUserSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),
     email: zod_1.z.string().email(),
-    password: zod_1.z.string().min(6),
+    password: zod_1.z.string().min(6).optional().or(zod_1.z.literal('')),
     role: zod_1.z.enum(['ADMIN', 'LEAD', 'DEV', 'admin', 'lead', 'dev']),
     teamId: zod_1.z.string().nullable().optional()
 });

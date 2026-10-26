@@ -46,7 +46,7 @@ export declare const teamService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     } | null>;
@@ -55,7 +55,7 @@ export declare const teamService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     } | null>;
@@ -64,7 +64,7 @@ export declare const teamService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     }[]>;

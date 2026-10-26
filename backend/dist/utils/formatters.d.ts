@@ -7,7 +7,7 @@ export declare const formatUser: (user: any) => {
     name: any;
     email: any;
     role: "admin" | "lead" | "dev";
-    teamId: any;
+    teams: any;
     createdAt: string | null;
     updatedAt: string | null;
 };
@@ -50,7 +50,7 @@ export declare const formatTask: (task: any) => {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     } | null;

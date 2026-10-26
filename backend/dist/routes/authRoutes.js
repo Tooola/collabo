@@ -10,4 +10,6 @@ router.post('/register', authController_1.authController.register);
 router.post('/logout', authenticate_1.authenticate, authController_1.authController.logout);
 router.get('/me', authenticate_1.authenticate, authController_1.authController.me);
 router.put('/change-password', authenticate_1.authenticate, authController_1.authController.changePassword);
+router.post('/forgot-password', authController_1.authController.forgotPassword);
+router.post('/reset-password', authController_1.authController.resetPassword);
 exports.default = router;

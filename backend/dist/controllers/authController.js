@@ -13,7 +13,7 @@ exports.authController = {
             }
             const result = await authService_1.authService.login(parsed.data.email, parsed.data.password, parsed.data.role);
             if (!result) {
-                return res.status(401).json({ error: 'Unauthorized', message: 'Invalid credentials' });
+                return res.status(401).json({ error: 'Unauthorized', message: 'Email ou mot de passe incorrect' });
             }
             if (result.error) {
                 return res.status(403).json({ error: 'Forbidden', message: result.error });
@@ -36,7 +36,7 @@ exports.authController = {
             }
             const result = await authService_1.authService.verifyOtp(parsed.data);
             if (!result) {
-                return res.status(401).json({ error: 'Unauthorized', message: 'Invalid credentials' });
+                return res.status(401).json({ error: 'Unauthorized', message: 'Email ou mot de passe incorrect' });
             }
             if (result.error) {
                 return res.status(400).json({ error: 'Bad Request', message: result.error });
@@ -87,9 +87,41 @@ exports.authController = {
     },
     async me(req, res) {
         const authReq = req;
-        const user = authReq.user ? await authService_1.authService.me(authReq.user.id) : null;
-        if (!user)
+        if (!authReq.user)
             return res.status(401).json({ error: 'Unauthorized', message: 'User not found' });
-        res.json({ user });
+        const result = await authService_1.authService.refreshToken(authReq.user.id);
+        if (!result)
+            return res.status(401).json({ error: 'Unauthorized', message: 'User not found' });
+        res.json({ user: result.user, token: result.token });
+    },
+    async forgotPassword(req, res) {
+        try {
+            const parsed = authSchemas_1.forgotPasswordSchema.safeParse(req.body);
+            if (!parsed.success) {
+                return res.status(400).json({ error: 'Validation Error', message: parsed.error.errors });
+            }
+            await authService_1.authService.forgotPassword(parsed.data.email);
+            res.json({ success: true });
+        }
+        catch (error) {
+            console.error('Forgot password error:', error);
+            res.status(500).json({ error: 'Internal Server Error', message: error.message });
+        }
+    },
+    async resetPassword(req, res) {
+        try {
+            const parsed = authSchemas_1.resetPasswordSchema.safeParse(req.body);
+            if (!parsed.success) {
+                return res.status(400).json({ error: 'Validation Error', message: parsed.error.errors });
+            }
+            const result = await authService_1.authService.resetPassword(parsed.data);
+            if (result.error)
+                return res.status(400).json({ error: 'Bad Request', message: result.error });
+            res.json({ success: true });
+        }
+        catch (error) {
+            console.error('Reset password error:', error);
+            res.status(500).json({ error: 'Internal Server Error', message: error.message });
+        }
     }
 };

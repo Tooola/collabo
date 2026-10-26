@@ -63,7 +63,10 @@ const formatUser = (user) => ({
     name: user.name,
     email: user.email,
     role: roleToClient[user.role] || 'dev',
-    teamId: user.teamId?.toString() || null,
+    teams: (user.teams || []).map((t) => ({
+        teamId: t.teamId?.toString() || null,
+        role: roleToClient[t.role] || 'dev'
+    })),
     createdAt: (0, exports.formatDate)(user.createdAt),
     updatedAt: (0, exports.formatDate)(user.updatedAt)
 });
@@ -91,9 +94,9 @@ const formatTask = (task) => ({
     id: task.id || task._id?.toString(),
     title: task.title,
     description: task.description ?? '',
-    projectId: task.projectId?.toString(),
+    projectId: task.projectId?._id ? task.projectId._id.toString() : task.projectId?.toString(),
     parentId: task.parentId ? task.parentId.toString() : null,
-    assignedToUserId: task.assignedTo?.toString() || null,
+    assignedToUserId: task.assignedTo?._id ? task.assignedTo._id.toString() : task.assignedTo?.toString() || null,
     dueDate: (0, exports.formatDate)(task.dueDate),
     status: taskStatusToClient[task.status] || 'To Do',
     createdAt: (0, exports.formatDate)(task.createdAt),

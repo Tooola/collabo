@@ -22,13 +22,13 @@ export declare const updateProjectSchema: z.ZodObject<{
     teamId: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     name?: string | undefined;
-    teamId?: string | undefined;
     description?: string | undefined;
+    teamId?: string | undefined;
     status?: "EN_COURS" | "TERMINE" | "SUSPENDU" | "active" | "on_hold" | "completed" | undefined;
 }, {
     name?: string | undefined;
-    teamId?: string | undefined;
     description?: string | undefined;
+    teamId?: string | undefined;
     status?: "EN_COURS" | "TERMINE" | "SUSPENDU" | "active" | "on_hold" | "completed" | undefined;
 }>;
 //# sourceMappingURL=projectSchemas.d.ts.map

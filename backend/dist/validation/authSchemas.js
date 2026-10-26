@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changePasswordSchema = exports.registerSchema = exports.verifyOtpSchema = exports.loginSchema = void 0;
+exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.changePasswordSchema = exports.registerSchema = exports.verifyOtpSchema = exports.loginSchema = void 0;
 const zod_1 = require("zod");
 exports.loginSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
@@ -22,5 +22,13 @@ exports.registerSchema = zod_1.z.object({
 });
 exports.changePasswordSchema = zod_1.z.object({
     currentPassword: zod_1.z.string().min(1),
+    newPassword: zod_1.z.string().min(8, 'Le nouveau mot de passe doit contenir au moins 8 caractères')
+});
+exports.forgotPasswordSchema = zod_1.z.object({
+    email: zod_1.z.string().email()
+});
+exports.resetPasswordSchema = zod_1.z.object({
+    email: zod_1.z.string().email(),
+    token: zod_1.z.string().min(6).max(6),
     newPassword: zod_1.z.string().min(8, 'Le nouveau mot de passe doit contenir au moins 8 caractères')
 });

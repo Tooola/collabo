@@ -16,6 +16,8 @@ const taskRoutes_1 = __importDefault(require("./routes/taskRoutes"));
 const teamRoutes_1 = __importDefault(require("./routes/teamRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const errorHandler_1 = require("./middlewares/errorHandler");
+const database_1 = require("./services/database");
+const seed_1 = require("./seed");
 const app = (0, express_1.default)();
 const globalLimiter = (0, express_rate_limit_1.default)({
     windowMs: 60 * 1000,
@@ -58,27 +60,45 @@ app.use(globalLimiter);
 app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
 });
+// Ensure DB is connected before handling API routes
+app.use(async (_req, res, next) => {
+    try {
+        await (0, database_1.connectDB)();
+        next();
+    }
+    catch (err) {
+        next(err);
+    }
+});
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/projects', projectRoutes_1.default);
 app.use('/api/tasks', taskRoutes_1.default);
 app.use('/api/teams', teamRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
-const database_1 = require("./services/database");
 app.use(errorHandler_1.errorHandler);
 // In serverless (Vercel) we export the app; locally we start the server
 if (process.env.VERCEL !== '1') {
-    (0, database_1.connectDB)().then(() => {
+    (0, database_1.connectDB)()
+        // Idempotent and it never throws, so a seed failure cannot keep
+        // the API from booting.
+        .then(() => (0, seed_1.runSeed)())
+        .then(() => {
         app.listen(env_1.env.port, () => {
             console.log(`API running on http://localhost:${env_1.env.port}`);
         });
-    }).catch(err => {
+    })
+        .catch(err => {
         console.error('Failed to connect to MongoDB', err);
         process.exit(1);
     });
 }
 else {
-    // Connect once on cold start, Vercel keeps the container warm
-    (0, database_1.connectDB)().catch(console.error);
+    // Connect once on cold start; Vercel keeps the container warm. The same
+    // idempotent seed pass runs alongside it, so the data self-heals on the
+    // first request after every cold start.
+    (0, database_1.connectDB)()
+        .then(() => (0, seed_1.runSeed)())
+        .catch(console.error);
 }
 exports.default = app;

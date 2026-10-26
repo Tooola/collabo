@@ -12,5 +12,12 @@ export const env = {
   smtpPort: Number(process.env.SMTP_PORT) || 587,
   smtpUser: process.env.SMTP_USER,
   smtpPassword: process.env.SMTP_PASSWORD,
-  smtpFrom: process.env.SMTP_FROM || 'support@civictinz.com'
+  smtpFrom: process.env.SMTP_FROM || 'support@civictinz.com',
+
+  // Demo seed -------------------------------------------------------------
+  // Runs once per database (guarded by a marker), never overwrites existing
+  // documents. Set SEED_ON_BOOT=false to opt out entirely.
+  seedOnBoot: (process.env.SEED_ON_BOOT ?? 'true').toLowerCase() !== 'false',
+  seedWorkspaceId: process.env.SEED_WORKSPACE_ID ?? null,
+  seedPassword: process.env.SEED_PASSWORD ?? 'password'
 };

@@ -21,7 +21,7 @@ export declare const authService: {
             name: any;
             email: any;
             role: "admin" | "lead" | "dev";
-            teamId: any;
+            teams: any;
             createdAt: string | null;
             updatedAt: string | null;
         };
@@ -47,7 +47,7 @@ export declare const authService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     }>;
@@ -56,9 +56,35 @@ export declare const authService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     } | null>;
+    refreshToken(id: string): Promise<{
+        user: {
+            id: any;
+            name: any;
+            email: any;
+            role: "admin" | "lead" | "dev";
+            teams: any;
+            createdAt: string | null;
+            updatedAt: string | null;
+        };
+        token: string;
+    } | null>;
+    forgotPassword(email: string): Promise<{
+        success: boolean;
+    }>;
+    resetPassword(data: {
+        email: string;
+        token: string;
+        newPassword: string;
+    }): Promise<{
+        error: string;
+        success?: undefined;
+    } | {
+        success: boolean;
+        error?: undefined;
+    }>;
 };
 //# sourceMappingURL=authService.d.ts.map

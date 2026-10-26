@@ -12,6 +12,7 @@ import teamRoutes from './routes/teamRoutes';
 import userRoutes from './routes/userRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { connectDB } from './services/database';
+import { runSeed } from './seed';
 
 const app = express();
 
@@ -80,17 +81,26 @@ app.use(errorHandler);
 
 // In serverless (Vercel) we export the app; locally we start the server
 if (process.env.VERCEL !== '1') {
-  connectDB().then(() => {
-    app.listen(env.port, () => {
-      console.log(`API running on http://localhost:${env.port}`);
+  connectDB()
+    // Idempotent and it never throws, so a seed failure cannot keep
+    // the API from booting.
+    .then(() => runSeed())
+    .then(() => {
+      app.listen(env.port, () => {
+        console.log(`API running on http://localhost:${env.port}`);
+      });
+    })
+    .catch(err => {
+      console.error('Failed to connect to MongoDB', err);
+      process.exit(1);
     });
-  }).catch(err => {
-    console.error('Failed to connect to MongoDB', err);
-    process.exit(1);
-  });
 } else {
-  // Connect once on cold start, Vercel keeps the container warm
-  connectDB().catch(console.error);
+  // Connect once on cold start; Vercel keeps the container warm. The same
+  // idempotent seed pass runs alongside it, so the data self-heals on the
+  // first request after every cold start.
+  connectDB()
+    .then(() => runSeed())
+    .catch(console.error);
 }
 
 export default app;

@@ -8,11 +8,14 @@ const formatters_1 = require("../utils/formatters");
 exports.projectService = {
     async getAll(req) {
         const wid = req.user.workspaceId;
-        if (req.user?.role !== 'ADMIN' && !req.user?.teamId)
+        const userTeams = req.user?.teams || [];
+        if (req.user?.role !== 'ADMIN' && userTeams.length === 0)
             return [];
         const query = { workspaceId: wid };
-        if (req.user?.role !== 'ADMIN')
-            query.teamId = req.user.teamId;
+        if (req.user?.role !== 'ADMIN') {
+            const teamIds = userTeams.map((t) => t.teamId);
+            query.teamId = { $in: teamIds };
+        }
         const projects = await Project_1.Project.find(query).populate('teamId').sort({ createdAt: 1 });
         return projects.map(formatters_1.formatProject);
     },
@@ -44,7 +47,7 @@ exports.projectService = {
             if (s)
                 updateData.status = s;
         }
-        const project = await Project_1.Project.findByIdAndUpdate(id, updateData, { new: true }).populate('teamId');
+        const project = await Project_1.Project.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }).populate('teamId');
         return project ? (0, formatters_1.formatProject)(project) : null;
     },
     async delete(id) {
@@ -56,7 +59,9 @@ exports.projectService = {
         const project = await Project_1.Project.findById(projectId);
         if (!project)
             throw (0, httpError_1.notFound)('Project not found');
-        if (user?.role !== 'ADMIN' && project.teamId.toString() !== user?.teamId) {
+        const userTeams = user?.teams || [];
+        const isMember = userTeams.some((t) => t.teamId === project.teamId.toString());
+        if (user?.role !== 'ADMIN' && !isMember) {
             throw (0, httpError_1.forbidden)('Access to this project is restricted to your team');
         }
         return project;

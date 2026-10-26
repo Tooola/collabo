@@ -11,19 +11,22 @@ const User_1 = require("../models/User");
 const env_1 = require("../config/env");
 const formatters_1 = require("../utils/formatters");
 const mailer_1 = require("../utils/mailer");
+const emailTemplates_1 = require("../utils/emailTemplates");
 exports.authService = {
     async login(email, password, requestedRole) {
-        const user = await User_1.User.findOne({ email });
+        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedPassword = password.trim();
+        const user = await User_1.User.findOne({ email: normalizedEmail });
         if (!user)
             return null;
-        // Validate role
+        // Validate role: strictly use base user.role
         if (requestedRole) {
             const dbRole = (0, formatters_1.roleFromClient)(requestedRole) ?? 'DEV';
             if (user.role !== dbRole) {
                 return { error: 'Accès refusé pour ce rôle' };
             }
         }
-        const valid = await bcryptjs_1.default.compare(password, user.password);
+        const valid = await bcryptjs_1.default.compare(normalizedPassword, user.password);
         if (!valid)
             return null;
         // Generate OTP
@@ -35,21 +38,14 @@ exports.authService = {
         console.log(`🔐 OTP pour ${user.email} : ${otpCode}`);
         console.log(`\n=========================================\n`);
         // Send email
-        const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Vérification de connexion - GestPro</h2>
-        <p>Bonjour,</p>
-        <p>Voici votre code de vérification à usage unique (OTP) :</p>
-        <h1 style="background-color: #f4f4f5; padding: 10px 20px; display: inline-block; letter-spacing: 5px; border-radius: 8px; color: #4f46e5;">${otpCode}</h1>
-        <p>Ce code expirera dans 5 minutes.</p>
-        <p>Si vous n'avez pas demandé ce code, vous pouvez ignorer cet e-mail.</p>
-      </div>
-    `;
+        const emailHtml = (0, emailTemplates_1.buildOtpEmailHtml)(otpCode);
         await (0, mailer_1.sendEmail)(user.email, 'Code de vérification - GestPro', emailHtml);
         return { requireOtp: true };
     },
     async verifyOtp(data) {
-        const user = await User_1.User.findOne({ email: data.email });
+        const normalizedEmail = data.email.toLowerCase().trim();
+        const normalizedPassword = data.password.trim();
+        const user = await User_1.User.findOne({ email: normalizedEmail });
         if (!user)
             return null;
         if (data.role) {
@@ -58,7 +54,7 @@ exports.authService = {
                 return { error: 'Accès refusé pour ce rôle' };
             }
         }
-        const valid = await bcryptjs_1.default.compare(data.password, user.password);
+        const valid = await bcryptjs_1.default.compare(normalizedPassword, user.password);
         if (!valid)
             return null;
         if (user.otpCode !== data.otp || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {
@@ -68,7 +64,13 @@ exports.authService = {
         user.otpCode = undefined;
         user.otpExpiresAt = undefined;
         await user.save();
-        const token = jsonwebtoken_1.default.sign({ id: user.id, email: user.email, role: user.role, teamId: user.teamId?.toString() || null, workspaceId: user.workspaceId.toString() }, env_1.env.jwtSecret, { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            teams: user.teams.map((t) => ({ teamId: t.teamId.toString(), role: t.role })),
+            workspaceId: user.workspaceId.toString()
+        }, env_1.env.jwtSecret, { expiresIn: '7d' });
         return {
             user: (0, formatters_1.formatUser)(user),
             token
@@ -94,7 +96,7 @@ exports.authService = {
             email: data.email,
             password: hashedPassword,
             role: (0, formatters_1.roleFromClient)(data.role) ?? 'DEV',
-            teamId: data.teamId || null,
+            teams: data.teamId ? [{ teamId: data.teamId, role: 'DEV' }] : [],
             workspaceId
         });
         return (0, formatters_1.formatUser)(user);
@@ -102,5 +104,52 @@ exports.authService = {
     async me(id) {
         const user = await User_1.User.findById(id);
         return user ? (0, formatters_1.formatUser)(user) : null;
+    },
+    async refreshToken(id) {
+        const user = await User_1.User.findById(id);
+        if (!user)
+            return null;
+        const token = jsonwebtoken_1.default.sign({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            teams: user.teams.map((t) => ({ teamId: t.teamId.toString(), role: t.role })),
+            workspaceId: user.workspaceId.toString()
+        }, env_1.env.jwtSecret, { expiresIn: '7d' });
+        return { user: (0, formatters_1.formatUser)(user), token };
+    },
+    async forgotPassword(email) {
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User_1.User.findOne({ email: normalizedEmail });
+        if (!user)
+            return { success: true }; // Always return success for security (prevent email enumeration)
+        // Generate 6-digit code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        user.resetPasswordToken = resetCode;
+        user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        await user.save();
+        console.log(`\n=========================================\n`);
+        console.log(`🔄 CODE DE RÉINITIALISATION pour ${user.email} : ${resetCode}`);
+        console.log(`\n=========================================\n`);
+        // Send the email
+        const emailHtml = (0, emailTemplates_1.buildOtpEmailHtml)(resetCode);
+        await (0, mailer_1.sendEmail)(user.email, 'Code de réinitialisation - GestPro', emailHtml);
+        return { success: true };
+    },
+    async resetPassword(data) {
+        const normalizedEmail = data.email.toLowerCase().trim();
+        const user = await User_1.User.findOne({ email: normalizedEmail });
+        if (!user || !user.resetPasswordToken || !user.resetPasswordExpires) {
+            return { error: 'Code invalide ou expiré' };
+        }
+        if (user.resetPasswordToken !== data.token || user.resetPasswordExpires < new Date()) {
+            return { error: 'Code invalide ou expiré' };
+        }
+        // Reset password
+        user.password = await bcryptjs_1.default.hash(data.newPassword, 10);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        return { success: true };
     }
 };

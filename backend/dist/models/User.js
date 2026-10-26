@@ -37,13 +37,18 @@ exports.User = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const userSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
     role: { type: String, enum: ['ADMIN', 'LEAD', 'DEV'], default: 'DEV' },
-    teamId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Team', default: null },
+    teams: [{
+            teamId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Team' },
+            role: { type: String, enum: ['LEAD', 'DEV'], default: 'DEV' }
+        }],
     workspaceId: { type: mongoose_1.Schema.Types.ObjectId, required: true },
     otpCode: { type: String, default: null },
-    otpExpiresAt: { type: Date, default: null }
+    otpExpiresAt: { type: Date, default: null },
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null }
 }, {
     timestamps: true,
     toJSON: {

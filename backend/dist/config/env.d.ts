@@ -9,5 +9,8 @@ export declare const env: {
     smtpUser: string | undefined;
     smtpPassword: string | undefined;
     smtpFrom: string;
+    seedOnBoot: boolean;
+    seedWorkspaceId: string | null;
+    seedPassword: string;
 };
 //# sourceMappingURL=env.d.ts.map

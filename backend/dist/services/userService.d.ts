@@ -5,7 +5,7 @@ export declare const userService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     }[]>;
@@ -14,14 +14,14 @@ export declare const userService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     } | null>;
     create(data: {
         name: string;
         email: string;
-        password: string;
+        password?: string;
         role?: string;
         teamId?: string | null;
     }, req: AuthRequest): Promise<{
@@ -29,7 +29,7 @@ export declare const userService: {
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     }>;
@@ -38,13 +38,12 @@ export declare const userService: {
         email?: string;
         password?: string;
         role?: string;
-        teamId?: string | null;
     }): Promise<{
         id: any;
         name: any;
         email: any;
         role: "admin" | "lead" | "dev";
-        teamId: any;
+        teams: any;
         createdAt: string | null;
         updatedAt: string | null;
     } | null>;

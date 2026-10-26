@@ -4,7 +4,10 @@ export interface AuthRequest extends Request {
         id: string;
         email: string;
         role: string;
-        teamId: string | null;
+        teams: {
+            teamId: string;
+            role: string;
+        }[];
         workspaceId: string;
     };
 }
