@@ -145,14 +145,19 @@ export default function Analytics() {
           {status && (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${
-                status.configured
-                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
-                  : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                !status.configured
+                  ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/20'
+                  : status.keyValid === false
+                    ? 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'
+                    : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
               }`}
               title={status.message}
             >
               <Database className="w-3.5 h-3.5" />
-              {t('analytics', status.configured ? 'statusOk' : 'statusMissing')}
+              {t(
+                'analytics',
+                !status.configured ? 'statusMissing' : status.keyValid === false ? 'statusInvalid' : 'statusOk'
+              )}
             </span>
           )}
 
@@ -200,6 +205,10 @@ export default function Analytics() {
         </div>
       )}
 
+      {/* Rien ne s'affiche avant une première analyse aboutie : en cas
+          d'échec, seul le bandeau d'erreur reste visible. */}
+      {data && (
+        <>
       {/* Instantané : calculé côté serveur, indépendant de l'appel distant */}
       {snapshot && (
         <Card title={t('analytics', 'kpiTitle')} icon={Gauge}>
@@ -383,6 +392,8 @@ export default function Analytics() {
           );
         })}
       </div>
+        </>
+      )}
 
       {/* Pied de page */}
       {data && (

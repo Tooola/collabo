@@ -31,6 +31,19 @@ const TOTAL_BUDGET_MS = 150_000;
 const AI_UNAVAILABLE_NOTE =
   "L'interprétation IA est momentanément indisponible. Les statistiques ci-dessous restent valables.";
 
+/** Vérification légère de la clé : testée sur GET /datasets, mise en cache. */
+const STATUS_CACHE_MS = 60_000;
+let cachedStatus: { at: number; value: StatusCheck } | null = null;
+
+export interface StatusCheck {
+  /** La variable est-elle renseignée ? */
+  configured: boolean;
+  /** L'API distante accepte-t-elle encore cette clé ? */
+  keyValid: boolean;
+  /** Message déjà en français, prêt à être affiché. */
+  message: string;
+}
+
 export interface AnalyticsErrorPayload {
   dataset?: string;
   field?: string;
@@ -280,6 +293,66 @@ export const analyticsService = {
 
   get appSlug(): string {
     return env.analyticsAppSlug;
+  },
+
+  /**
+   * Distingue « variable renseignée » de « clé encore acceptée ».
+   *
+   * Une clé révoquée renvoie un 401 alors que tout semble configuré : sans ce
+   * contrôle, le badge afficherait « connecté » pendant que chaque analyse
+   * échoue. Seul un 401/403 est traité comme une clé morte — les erreurs
+   * passagères ne déclenchent pas de fausse alerte.
+   */
+  async verify(): Promise<StatusCheck> {
+    if (!env.analyticsApiKey) {
+      return {
+        configured: false,
+        keyValid: false,
+        message: "Service d'analyse non configuré : renseignez ANALYTICS_API_KEY sur le serveur."
+      };
+    }
+
+    if (cachedStatus && Date.now() - cachedStatus.at < STATUS_CACHE_MS) return cachedStatus.value;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+
+    let value: StatusCheck;
+    try {
+      const res = await fetch(`${env.analyticsApiUrl}/api/v1/datasets`, {
+        method: 'GET',
+        headers: { 'X-API-Key': env.analyticsApiKey },
+        signal: controller.signal
+      });
+
+      if (res.ok) {
+        value = { configured: true, keyValid: true, message: "Service d'analyse externe branché." };
+      } else if (res.status === 401 || res.status === 403) {
+        value = {
+          configured: true,
+          keyValid: false,
+          message:
+            "Clé d'analyse révoquée ou invalide : régénérez-la sur l'API d'analyse, puis mettez à jour ANALYTICS_API_KEY et redémarrez le serveur."
+        };
+      } else {
+        value = {
+          configured: true,
+          keyValid: true,
+          message: `Vérification de la clé impossible pour l'instant (HTTP ${res.status}).`
+        };
+      }
+    } catch {
+      value = {
+        configured: true,
+        keyValid: true,
+        message: "API d'analyse injoignable pour l'instant (réveil à froid ?). Réessayez plus tard."
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+
+    cachedStatus = { at: Date.now(), value };
+    return value;
   },
 
   /** `POST /api/v1/analyze` — un jeu de données à la fois. */

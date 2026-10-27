@@ -104,15 +104,19 @@ export const analyticsController = {
    * GET /api/analytics/status — indique à la page si le service est branché,
    * sans jamais exposer la clé.
    */
+  /**
+   * GET /api/analytics/status — va vérifier côté API si la clé est encore
+   * acceptée : une variable renseignée peut cacher une clé révoquée, et le
+   * badge doit alors passer en alerte plutôt qu'en vert.
+   */
   async status(_req: Request, res: Response) {
-    const configured = analyticsService.isConfigured();
+    const check = await analyticsService.verify();
     res.json({
-      configured,
+      configured: check.configured,
+      keyValid: check.keyValid,
       application: analyticsService.appSlug,
       datasets: [FLUX_SLUG, TACHES_SLUG, PROJETS_SLUG],
-      message: configured
-        ? "Service d'analyse externe branché."
-        : "Service d'analyse non configuré : renseignez ANALYTICS_API_KEY sur le serveur."
+      message: check.message
     });
   },
 
