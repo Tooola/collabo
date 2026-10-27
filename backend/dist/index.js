@@ -15,6 +15,7 @@ const projectRoutes_1 = __importDefault(require("./routes/projectRoutes"));
 const taskRoutes_1 = __importDefault(require("./routes/taskRoutes"));
 const teamRoutes_1 = __importDefault(require("./routes/teamRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
+const analyticsRoutes_1 = __importDefault(require("./routes/analyticsRoutes"));
 const errorHandler_1 = require("./middlewares/errorHandler");
 const database_1 = require("./services/database");
 const seed_1 = require("./seed");
@@ -76,6 +77,7 @@ app.use('/api/projects', projectRoutes_1.default);
 app.use('/api/tasks', taskRoutes_1.default);
 app.use('/api/teams', teamRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
+app.use('/api/analytics', analyticsRoutes_1.default);
 app.use(errorHandler_1.errorHandler);
 // In serverless (Vercel) we export the app; locally we start the server
 if (process.env.VERCEL !== '1') {

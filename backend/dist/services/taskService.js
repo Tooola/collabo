@@ -1,32 +1,37 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.taskService = void 0;
+exports.buildVisibleTaskQuery = buildVisibleTaskQuery;
 const Task_1 = require("../models/Task");
 const Project_1 = require("../models/Project");
 const User_1 = require("../models/User");
 const httpError_1 = require("../utils/httpError");
 const formatters_1 = require("../utils/formatters");
+/**
+ * Visibility rule shared by GET /tasks and the analytics aggregations, so a
+ * caller can never read more through an analytics endpoint than through the
+ * task list itself.
+ */
+async function buildVisibleTaskQuery(req) {
+    const wid = req.user.workspaceId;
+    if (req.user?.role === 'ADMIN')
+        return { workspaceId: wid };
+    // Use JWT teams array (always fresh via /me token refresh on page load)
+    const userTeams = req.user?.teams || [];
+    const leadTeamIds = userTeams.filter(t => t.role === 'LEAD').map(t => t.teamId);
+    if (leadTeamIds.length > 0) {
+        // DEV who is also a team lead: see all tasks from led teams + their own assigned tasks
+        const projects = await Project_1.Project.find({ teamId: { $in: leadTeamIds }, workspaceId: wid }, '_id');
+        return {
+            workspaceId: wid,
+            $or: [{ assignedTo: req.user.id }, { projectId: { $in: projects.map(p => p._id) } }]
+        };
+    }
+    return { workspaceId: wid, assignedTo: req.user.id };
+}
 exports.taskService = {
     async getAll(req) {
-        const wid = req.user.workspaceId;
-        let query = { workspaceId: wid };
-        if (req.user?.role === 'ADMIN') {
-            // no additional filter
-        }
-        else {
-            // Use JWT teams array (always fresh via /me token refresh on page load)
-            const userTeams = req.user?.teams || [];
-            const leadTeamIds = userTeams.filter(t => t.role === 'LEAD').map(t => t.teamId);
-            if (leadTeamIds.length > 0) {
-                // DEV who is also a team lead: see all tasks from led teams + their own assigned tasks
-                const projects = await Project_1.Project.find({ teamId: { $in: leadTeamIds }, workspaceId: wid }, '_id');
-                const projectIds = projects.map(p => p._id);
-                query = { workspaceId: wid, $or: [{ assignedTo: req.user.id }, { projectId: { $in: projectIds } }] };
-            }
-            else {
-                query.assignedTo = req.user.id;
-            }
-        }
+        const query = await buildVisibleTaskQuery(req);
         const tasks = await Task_1.Task.find(query).populate('projectId').populate('assignedTo').sort({ createdAt: 1 });
         return tasks.map(t => (0, formatters_1.formatTask)({ ...t.toJSON(), assignedToUser: t.populated('assignedTo') ? t.assignedTo : null }));
     },

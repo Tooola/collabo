@@ -12,5 +12,8 @@ export declare const env: {
     seedOnBoot: boolean;
     seedWorkspaceId: string | null;
     seedPassword: string;
+    analyticsApiUrl: string;
+    analyticsApiKey: string | null;
+    analyticsAppSlug: string;
 };
 //# sourceMappingURL=env.d.ts.map

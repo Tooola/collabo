@@ -22,5 +22,11 @@ exports.env = {
     // documents. Set SEED_ON_BOOT=false to opt out entirely.
     seedOnBoot: (process.env.SEED_ON_BOOT ?? 'true').toLowerCase() !== 'false',
     seedWorkspaceId: process.env.SEED_WORKSPACE_ID ?? null,
-    seedPassword: process.env.SEED_PASSWORD ?? 'password'
+    seedPassword: process.env.SEED_PASSWORD ?? 'password',
+    // External analytics API -------------------------------------------------
+    // The key is read from the server-side env only: it never reaches the
+    // frontend bundle, the source code, the logs or git.
+    analyticsApiUrl: (process.env.ANALYTICS_API_URL ?? 'https://analytics-6zid.onrender.com').replace(/\/+$/, ''),
+    analyticsApiKey: process.env.ANALYTICS_API_KEY ?? null,
+    analyticsAppSlug: process.env.ANALYTICS_APP_SLUG ?? 'gestpro'
 };

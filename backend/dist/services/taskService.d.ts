@@ -1,4 +1,10 @@
 import { AuthRequest } from '../middlewares/authenticate';
+/**
+ * Visibility rule shared by GET /tasks and the analytics aggregations, so a
+ * caller can never read more through an analytics endpoint than through the
+ * task list itself.
+ */
+export declare function buildVisibleTaskQuery(req: AuthRequest): Promise<any>;
 export declare const taskService: {
     getAll(req: AuthRequest): Promise<{
         id: any;

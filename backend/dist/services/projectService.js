@@ -1,21 +1,29 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.projectService = void 0;
+exports.buildVisibleProjectQuery = buildVisibleProjectQuery;
 const Project_1 = require("../models/Project");
 const Task_1 = require("../models/Task");
 const httpError_1 = require("../utils/httpError");
 const formatters_1 = require("../utils/formatters");
+/**
+ * Visibility rule shared by GET /projects and the analytics aggregations, so
+ * the portfolio view can never expose a project the caller cannot open.
+ */
+function buildVisibleProjectQuery(req) {
+    const wid = req.user.workspaceId;
+    if (req.user?.role === 'ADMIN')
+        return { workspaceId: wid };
+    const userTeams = req.user?.teams || [];
+    if (userTeams.length === 0)
+        return { workspaceId: wid, _id: { $in: [] } };
+    return { workspaceId: wid, teamId: { $in: userTeams.map((t) => t.teamId) } };
+}
 exports.projectService = {
     async getAll(req) {
-        const wid = req.user.workspaceId;
-        const userTeams = req.user?.teams || [];
-        if (req.user?.role !== 'ADMIN' && userTeams.length === 0)
+        const query = buildVisibleProjectQuery(req);
+        if (query._id?.$in?.length === 0)
             return [];
-        const query = { workspaceId: wid };
-        if (req.user?.role !== 'ADMIN') {
-            const teamIds = userTeams.map((t) => t.teamId);
-            query.teamId = { $in: teamIds };
-        }
         const projects = await Project_1.Project.find(query).populate('teamId').sort({ createdAt: 1 });
         return projects.map(formatters_1.formatProject);
     },

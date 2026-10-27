@@ -3,13 +3,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import {
-  LayoutDashboard, FolderKanban, Users, UserCog, LogOut, Menu, X, Sun, Moon, User, Languages
+  LayoutDashboard, FolderKanban, Users, UserCog, LogOut, Menu, X, Sun, Moon, User, Languages, ChartColumn
 } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'lead', 'dev'] },
   { to: '/projects', label: 'Projects', icon: FolderKanban, roles: ['admin', 'lead', 'dev'] },
+  { to: '/analytics', label: 'Analytics', icon: ChartColumn, roles: ['admin', 'lead', 'dev'] },
   { to: '/teams', label: 'Teams', icon: Users, roles: ['admin', 'lead', 'dev'] },
   { to: '/users', label: 'Users', icon: UserCog, roles: ['admin'] },
   { to: '/profile', label: 'Profile', icon: User, roles: ['admin', 'lead', 'dev'] },

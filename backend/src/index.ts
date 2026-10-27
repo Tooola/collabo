@@ -10,6 +10,7 @@ import projectRoutes from './routes/projectRoutes';
 import taskRoutes from './routes/taskRoutes';
 import teamRoutes from './routes/teamRoutes';
 import userRoutes from './routes/userRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { connectDB } from './services/database';
 import { runSeed } from './seed';
@@ -75,6 +76,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 
 app.use(errorHandler);

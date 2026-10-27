@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import Teams from './pages/Teams';
+import Analytics from './pages/Analytics';
 import Users from './pages/Users';
 import Profile from './pages/Profile';
 import LandingPage from './pages/LandingPage';
@@ -39,6 +40,7 @@ export default function App() {
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:id" element={<ProjectDetail />} />
                 <Route path="/teams" element={<Teams />} />
+                <Route path="/analytics" element={<Analytics />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route
                   path="/users"

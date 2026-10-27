@@ -1,4 +1,9 @@
 import { AuthRequest } from '../middlewares/authenticate';
+/**
+ * Visibility rule shared by GET /projects and the analytics aggregations, so
+ * the portfolio view can never expose a project the caller cannot open.
+ */
+export declare function buildVisibleProjectQuery(req: AuthRequest): any;
 export declare const projectService: {
     getAll(req: AuthRequest): Promise<{
         id: any;
