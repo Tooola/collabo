@@ -1,0 +1,289 @@
+{
+  "_lisez_moi": [
+    "Reference complete pour recreer l'application et les 3 jeux de donnees de GestPro",
+    "a la main via l'interface de la plateforme d'analyse (ou via /docs).",
+    "Tout ceci a deja ete teste en reel : chaque 'POST' ci-dessous repond 201.",
+    "IMPORTANT : 'type' est interdit, c'est 'technical_type'.",
+    "Apres creation : copier la cle dans backend/.env (ANALYTICS_API_KEY),",
+    "ANALYTICS_APP_SLUG = slug de l'application, puis redemarrer le backend."
+  ],
+
+  "application": {
+    "_endpoint": "POST /api/v1/applications",
+    "_a_envoyer": ["name", "description"],
+    "_ne_pas_envoyer": "slug — il est GENERE depuis 'name' et ne figure pas dans le schema ApplicationCreate",
+    "_slug_attendu": "gestpro (derive de 'GestPro')",
+    "_status": "optionnel, 'active' par defaut",
+    "name": "GestPro",
+    "description": "Gestion de projet collaborative pour equipes : suivi de taches et sous-taches (a faire, en cours, bloque, termine), repartition en projets et equipes, echeances, retards et taux d'avancement. Objectif : piloter la charge des equipes, detecter les taches bloquees et les retards, et estimer la livraison des projets."
+  },
+
+  "variables_env_associees": {
+    "ANALYTICS_API_URL": "https://analytics-6zid.onrender.com",
+    "ANALYTICS_API_KEY": "<cle affichee UNE SEULE FOIS a la creation de l'application>",
+    "ANALYTICS_APP_SLUG": "gestpro"
+  },
+
+  "datasets": [
+    {
+      "_endpoint": "POST /api/v1/datasets",
+      "_auth": "header X-API-Key: <cle de l'application>",
+      "name": "Flux mensuel des taches",
+      "slug": "flux-mensuel",
+      "description": "Series mensuelles du flux de travail : creation, cloture, stock ouvert et retards, pour analyser tendances et previsions sur l'historique du projet.",
+      "fields": [
+        {
+          "name": "periode",
+          "technical_type": "date",
+          "semantic_type": "periode",
+          "unit": null,
+          "required": true,
+          "description": "Premier jour du mois mesure (cle de jointure multi-jeux)"
+        },
+        {
+          "name": "taches_creees",
+          "technical_type": "integer",
+          "semantic_type": "volume",
+          "unit": null,
+          "required": true,
+          "description": "Taches creees dans le mois"
+        },
+        {
+          "name": "taches_terminees",
+          "technical_type": "integer",
+          "semantic_type": "volume",
+          "unit": null,
+          "required": true,
+          "description": "Taches cloturees dans le mois"
+        },
+        {
+          "name": "ouvertes_fin_mois",
+          "technical_type": "integer",
+          "semantic_type": "stock",
+          "unit": null,
+          "required": true,
+          "description": "Taches encore ouvertes a la fin du mois"
+        },
+        {
+          "name": "retards_fin_mois",
+          "technical_type": "integer",
+          "semantic_type": "risque",
+          "unit": null,
+          "required": true,
+          "description": "Taches en retard a la fin du mois"
+        }
+      ]
+    },
+    {
+      "_endpoint": "POST /api/v1/datasets",
+      "_auth": "header X-API-Key: <cle de l'application>",
+      "name": "Taches individuelles",
+      "slug": "taches",
+      "description": "Une ligne par tache du projet, avec statut, rattachement, echeance et delai de resolution. Sert aux statistiques par segment (projet, equipe, responsable) et a la detection d'anomalies.",
+      "fields": [
+        {
+          "name": "periode",
+          "technical_type": "date",
+          "semantic_type": "periode",
+          "unit": null,
+          "required": true,
+          "description": "Mois de creation ajuste au 1er du mois (cle de jointure multi-jeux)"
+        },
+        {
+          "name": "titre",
+          "technical_type": "string",
+          "semantic_type": "libelle",
+          "unit": null,
+          "required": true,
+          "description": "Intitule de la tache"
+        },
+        {
+          "name": "statut",
+          "technical_type": "string",
+          "semantic_type": "categorie",
+          "unit": null,
+          "required": true,
+          "description": "Libelle du statut : a faire, en cours, bloque, termine"
+        },
+        {
+          "name": "projet",
+          "technical_type": "string",
+          "semantic_type": "categorie",
+          "unit": null,
+          "required": true,
+          "description": "Projet rattache"
+        },
+        {
+          "name": "equipe",
+          "technical_type": "string",
+          "semantic_type": "categorie",
+          "unit": null,
+          "required": false,
+          "description": "Equipe responsable"
+        },
+        {
+          "name": "responsable",
+          "technical_type": "string",
+          "semantic_type": "categorie",
+          "unit": null,
+          "required": false,
+          "description": "Membre assigne, vide si la tache n'est pas affectee"
+        },
+        {
+          "name": "niveau",
+          "technical_type": "string",
+          "semantic_type": "categorie",
+          "unit": null,
+          "required": true,
+          "description": "epic, tache ou sous-tache"
+        },
+        {
+          "name": "date_creation",
+          "technical_type": "datetime",
+          "semantic_type": "horodatage",
+          "unit": null,
+          "required": true,
+          "description": "Date de creation"
+        },
+        {
+          "name": "date_echeance",
+          "technical_type": "datetime",
+          "semantic_type": "horodatage",
+          "unit": null,
+          "required": false,
+          "description": "Echeance planifiee"
+        },
+        {
+          "name": "date_fin",
+          "technical_type": "datetime",
+          "semantic_type": "horodatage",
+          "unit": null,
+          "required": false,
+          "description": "Derniere mise a jour si terminee (approximation : le modele ne porte pas de completedAt)"
+        },
+        {
+          "name": "delai_jours",
+          "technical_type": "float",
+          "semantic_type": "duree",
+          "unit": "jours",
+          "required": true,
+          "description": "Jours entre creation et cloture, ou jusqu'a aujourd'hui si encore ouverte"
+        },
+        {
+          "name": "nb_sous_taches",
+          "technical_type": "integer",
+          "semantic_type": "volume",
+          "unit": null,
+          "required": true,
+          "description": "Nombre de sous-taches directes"
+        },
+        {
+          "name": "en_retard",
+          "technical_type": "boolean",
+          "semantic_type": "risque",
+          "unit": null,
+          "required": true,
+          "description": "Echeance passee et non terminee"
+        }
+      ]
+    },
+    {
+      "_endpoint": "POST /api/v1/datasets",
+      "_auth": "header X-API-Key: <cle de l'application>",
+      "name": "Projets",
+      "slug": "projets",
+      "description": "Une ligne par projet, avec avancement, repartition des statuts et anciennete. Sert au pilotage de portefeuille.",
+      "fields": [
+        {
+          "name": "projet",
+          "technical_type": "string",
+          "semantic_type": "libelle",
+          "unit": null,
+          "required": true,
+          "description": "Nom du projet"
+        },
+        {
+          "name": "statut",
+          "technical_type": "string",
+          "semantic_type": "categorie",
+          "unit": null,
+          "required": true,
+          "description": "Libelle du statut : en cours, termine, suspendu"
+        },
+        {
+          "name": "equipe",
+          "technical_type": "string",
+          "semantic_type": "categorie",
+          "unit": null,
+          "required": false,
+          "description": "Equipe rattachee"
+        },
+        {
+          "name": "date_creation",
+          "technical_type": "datetime",
+          "semantic_type": "horodatage",
+          "unit": null,
+          "required": true,
+          "description": "Date de creation"
+        },
+        {
+          "name": "nb_taches",
+          "technical_type": "integer",
+          "semantic_type": "volume",
+          "unit": null,
+          "required": true,
+          "description": "Total des taches du projet"
+        },
+        {
+          "name": "nb_terminees",
+          "technical_type": "integer",
+          "semantic_type": "volume",
+          "unit": null,
+          "required": true,
+          "description": "Taches terminees"
+        },
+        {
+          "name": "nb_bloquees",
+          "technical_type": "integer",
+          "semantic_type": "risque",
+          "unit": null,
+          "required": true,
+          "description": "Taches bloquees"
+        },
+        {
+          "name": "taux_avancement",
+          "technical_type": "float",
+          "semantic_type": "ratio",
+          "unit": "%",
+          "required": true,
+          "description": "Pourcentage de taches terminees"
+        },
+        {
+          "name": "nb_jours_ouverture",
+          "technical_type": "integer",
+          "semantic_type": "duree",
+          "unit": "jours",
+          "required": true,
+          "description": "Jours ecoules depuis la creation"
+        }
+      ]
+    }
+  ],
+
+  "champs_libres_refuses": {
+    "type": "INTERDIT — utiliser technical_type",
+    "enum_officielle_DatasetFieldType": [
+      "string",
+      "integer",
+      "float",
+      "boolean",
+      "date",
+      "datetime"
+    ],
+    "attention": "il n'existe PAS de type 'json' — toute autre valeur est refusee en 422",
+    "slug_du_dataset": "OBLIGATOIRE (name, slug, fields) contrairement a l'application",
+    "required_du_champ": "booleen, true par defaut",
+    "semantic_type": "chaine libre, max 100 caracteres, nullable — c'est une libelle semantique (periode, volume, risque...)",
+    "unit": "chaine libre, max 50 caracteres, nullable"
+  }
+}
