@@ -1,0 +1,3 @@
+
+# Cache pnpm (base SQLite + caches de paquets)
+.pnpm-store/
