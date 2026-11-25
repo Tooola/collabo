@@ -25,7 +25,9 @@ const DEFAULT_ANALYSIS: Record<string, AnalysisType[]> = {
   flux: ['summary', 'trend', 'anomaly', 'forecast'],
   taches: ['summary', 'anomaly', 'distribution'],
   projets: ['summary', 'correlation', 'anomaly', 'distribution'],
-  synthese: ['summary', 'trend', 'anomaly', 'correlation']
+  // `forecast` est nécessaire pour tracer la courbe de prévision dans
+  // l'écran d'analyse : sans lui, l'API renvoie `forecast: null`.
+  synthese: ['summary', 'trend', 'anomaly', 'correlation', 'forecast']
 };
 
 const EMPTY_NOTE = "Aucune donnée à analyser pour l'instant : créez quelques tâches puis relancez.";
@@ -45,10 +47,16 @@ function limitRows(rows: Row[]): { rows: Row[]; truncated: boolean } {
 }
 
 /** Réponse normalée : la page consomme toujours les mêmes clés. */
-function respond(res: Response, outcome: AnalyticsOutcome, meta: Record<string, unknown>): void {
+function respond(
+  res: Response,
+  outcome: AnalyticsOutcome,
+  meta: Record<string, unknown>,
+  series: AnalyticsSeries
+): void {
   res.json({
     success: outcome.success,
     ...meta,
+    series,
     results: outcome.results,
     insights: outcome.insights,
     ai: outcome.ai,
@@ -69,6 +77,7 @@ function respondEmpty(res: Response, meta: Record<string, unknown>): void {
     empty: true,
     message: EMPTY_NOTE,
     ...meta,
+    series: emptySeries(),
     results: {},
     insights: {},
     ai: null,
@@ -97,6 +106,72 @@ function baseMeta(
     truncated: limited.truncated,
     snapshot: buildSnapshot(ctx)
   };
+}
+
+/**
+ * Séries prêtes à être tracées.
+ *
+ * L'API d'analyse ne renvoie que des agrégats (`trend` = un premier point et
+ * un dernier) : impossible d'en dessiner une courbe. Les lignes brutes sont
+ * en revanche déjà construites ici pour être envoyées — on en profite pour les
+ * renvoyer, sans appel supplémentaire ni coût de quota.
+ */
+export interface AnalyticsSeries {
+  flux: Array<{ periode: string; creees: number; terminees: number; ouvertes: number; retards: number }>;
+  statuts: Array<{ statut: string; total: number }>;
+  projets: Array<{ projet: string; avancement: number; taches: number; terminees: number; bloquees: number }>;
+  retards: Array<{ equipe: string; retards: number; total: number }>;
+}
+
+function emptySeries(): AnalyticsSeries {
+  return { flux: [], statuts: [], projets: [], retards: [] };
+}
+
+function buildSeries(input: { flux?: Row[]; taches?: Row[]; projets?: Row[] }): AnalyticsSeries {
+  const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  const series = emptySeries();
+
+  series.flux = (input.flux ?? []).map(r => ({
+    periode: String(r.periode ?? '').slice(0, 7),
+    creees: num(r.taches_creees),
+    terminees: num(r.taches_terminees),
+    ouvertes: num(r.ouvertes_fin_mois),
+    retards: num(r.retards_fin_mois)
+  }));
+
+  // Répartition des statuts : une part de ce que l'API regroupe déjà en
+  // `grouped`, mais sur l'ensemble des tâches et non sur un découpage.
+  const statuts = new Map<string, number>();
+  for (const r of input.taches ?? []) {
+    const statut = String(r.statut ?? 'Inconnu');
+    statuts.set(statut, (statuts.get(statut) ?? 0) + 1);
+  }
+  series.statuts = [...statuts]
+    .map(([statut, total]) => ({ statut, total }))
+    .sort((a, b) => b.total - a.total);
+
+  series.projets = (input.projets ?? []).map(r => ({
+    projet: String(r.projet ?? ''),
+    avancement: num(r.taux_avancement),
+    taches: num(r.nb_taches),
+    terminees: num(r.nb_terminees),
+    bloquees: num(r.nb_bloquees)
+  }));
+
+  // Retards par équipe : alimente l'alerte de charge du tableau de bord.
+  const parEquipe = new Map<string, { retards: number; total: number }>();
+  for (const r of input.taches ?? []) {
+    const equipe = String(r.equipe ?? 'Sans équipe');
+    const cur = parEquipe.get(equipe) ?? { retards: 0, total: 0 };
+    cur.total += 1;
+    if (r.en_retard === true) cur.retards += 1;
+    parEquipe.set(equipe, cur);
+  }
+  series.retards = [...parEquipe]
+    .map(([equipe, v]) => ({ equipe, ...v }))
+    .sort((a, b) => b.retards - a.retards || b.total - a.total);
+
+  return series;
 }
 
 export const analyticsController = {
@@ -138,10 +213,15 @@ export const analyticsController = {
       includeAi: parsed.data.includeAi
     });
 
-    respond(res, outcome, {
-      ...meta,
-      warning: limited.rows.length < MIN_PERIODS ? THIN_NOTE(limited.rows.length) : null
-    });
+    respond(
+      res,
+      outcome,
+      {
+        ...meta,
+        warning: limited.rows.length < MIN_PERIODS ? THIN_NOTE(limited.rows.length) : null
+      },
+      buildSeries({ flux: limited.rows })
+    );
   },
 
   /** POST /api/analytics/taches — statistiques par segment et anomalies de délai. */
@@ -163,7 +243,7 @@ export const analyticsController = {
       includeAi: parsed.data.includeAi
     });
 
-    respond(res, outcome, meta);
+    respond(res, outcome, meta, buildSeries({ taches: limited.rows }));
   },
 
   /** POST /api/analytics/projets — portefeuille et corrélations d'avancement. */
@@ -185,7 +265,7 @@ export const analyticsController = {
       includeAi: parsed.data.includeAi
     });
 
-    respond(res, outcome, meta);
+    respond(res, outcome, meta, buildSeries({ projets: limited.rows }));
   },
 
   /**
@@ -229,9 +309,14 @@ export const analyticsController = {
       includeAi: parsed.data.includeAi
     });
 
-    respond(res, outcome, {
-      ...meta,
-      warning: flux.rows.length < MIN_PERIODS ? THIN_NOTE(flux.rows.length) : null
-    });
+    respond(
+      res,
+      outcome,
+      {
+        ...meta,
+        warning: flux.rows.length < MIN_PERIODS ? THIN_NOTE(flux.rows.length) : null
+      },
+      buildSeries({ flux: flux.rows, taches: taches.rows, projets: projets.rows })
+    );
   }
 };
