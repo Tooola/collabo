@@ -1,0 +1,502 @@
+import { useState } from 'react';
+import {
+  ResponsiveContainer,
+  AreaChart, Area, LineChart, Line,
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from 'recharts';
+import { ChartColumn } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+
+/**
+ * Rendus graphiques de l'écran d'analyse.
+ *
+ * Deux sources de données, complémentaires :
+ *  - `data.series` : séries brutes calculées **localement** par le backend
+ *    (l'API d'analyse ne renvoie que des agrégats, pas de courbe exploitable) ;
+ *  - `data.results` / `data.crossCorrelations` : résultats du service distant
+ *    (prévision, segments, corrélations).
+ *
+ * Tout est dégradable : une donnée absente fait simplement disparaître le
+ * graphique correspondant, jamais une erreur.
+ */
+
+/** Palettes partagées avec le reste de la page. */
+const COLORS = {
+  creees: '#6366f1',
+  terminees: '#10b981',
+  ouvertes: '#f59e0b',
+  retards: '#ef4444'
+};
+
+const AXIS = { fontSize: 11, fill: '#94a3b8' };
+
+/**
+ * Les quatre mesures du flux portent un nom côté backend (`ouvertes_fin_mois`)
+ * et un nom court côté graphique (`ouvertes`) : c'est le pont entre les deux.
+ */
+const FLUX_METRICS = [
+  { remote: 'taches_creees', key: 'creees', label: 'metricCreated', color: COLORS.creees },
+  { remote: 'taches_terminees', key: 'terminees', label: 'metricDone', color: COLORS.terminees },
+  { remote: 'ouvertes_fin_mois', key: 'ouvertes', label: 'metricOpen', color: COLORS.ouvertes },
+  { remote: 'retards_fin_mois', key: 'retards', label: 'metricOverdue', color: COLORS.retards }
+];
+
+/** Teinte lisible pour un libellé de statut, quel que soit sa langue. */
+function statusColor(label) {
+  const s = String(label ?? '').toLowerCase();
+  if (s.includes('termin') || s.includes('done')) return '#10b981';
+  if (s.includes('cours') || s.includes('progress')) return '#6366f1';
+  if (s.includes('bloqu') || s.includes('block')) return '#ef4444';
+  if (s.includes('faire') || s.includes('todo') || s.includes('to do')) return '#f59e0b';
+  return '#94a3b8';
+}
+
+const fmt = v =>
+  typeof v === 'number' && Number.isFinite(v) ? Number(v.toFixed(1)).toLocaleString() : '—';
+
+/**
+ * Normalise une liste reçue soit en tableau, soit en chaîne espace-séparée.
+ *
+ * Le service distant n'a pas de schéma stable pour `column` / `horizon` : selon
+ * la version il renvoie `["a","b"]` ou `"a b"`. `String(["a","b"])` produirait
+ * `"a,b"` — un seul jeton, donc une série vide — d'où ce découpage explicite.
+ */
+function toList(value) {
+  if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean);
+  if (value === null || value === undefined) return [];
+  return String(value).split(/[\s,]+/).filter(Boolean);
+}
+
+/**
+ * Découpe le bloc de prévision par colonne.
+ *
+ * L'API renvoie `column` / `horizon` (une entrée par mesure prévue) et un
+ * tableau `predictions` **aplati**, sans nom de colonne par point : chaque
+ * prévision appartient à la `n`ᵉ colonne, par blocs successifs.
+ *
+ * Toute incohérence renvoie `{}` : mieux vaut n'afficher aucune courbe plutôt
+ * qu'une courbe attribuée à la mauvaise mesure.
+ */
+function parseForecast(forecast) {
+  if (!forecast || !Array.isArray(forecast.predictions) || forecast.predictions.length === 0) {
+    return {};
+  }
+
+  const columns = toList(forecast.column);
+  const horizons = toList(forecast.horizon).map(Number);
+  const predictions = forecast.predictions;
+
+  const out = {};
+  let cursor = 0;
+
+  for (let c = 0; c < columns.length; c++) {
+    const h = Number.isFinite(horizons[c]) ? horizons[c] : horizons[0];
+    if (!Number.isFinite(h) || h <= 0) return {};
+    if (cursor + h > predictions.length) return {};
+    out[columns[c]] = predictions.slice(cursor, cursor + h);
+    cursor += h;
+  }
+
+  return cursor === predictions.length ? out : {};
+}
+
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs shadow-xl">
+      <p className="mb-1 font-black text-slate-700 dark:text-slate-200">{label}</p>
+      {payload.map(p => (
+        <p key={p.dataKey} className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+          <span
+            className="inline-block h-2 w-2 shrink-0 rounded-full"
+            style={{ background: p.color || p.stroke || p.payload?.fill }}
+          />
+          <span>{p.name}</span>
+          <span className="ml-auto font-bold text-slate-900 dark:text-white">{fmt(p.value)}</span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function ChartFrame({ title, note, children }) {
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          {title}
+        </h4>
+        {note && (
+          <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">{note}</span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export default function AnalyticsCharts({ data }) {
+  const { t } = useLanguage();
+  const [metric, setMetric] = useState('ouvertes');
+
+  const series = data?.series ?? {};
+  const flux = Array.isArray(series.flux) && series.flux.length ? series.flux : null;
+  const statuts = Array.isArray(series.statuts) && series.statuts.length ? series.statuts : null;
+  const projets = Array.isArray(series.projets) && series.projets.length ? series.projets : null;
+  const retards = Array.isArray(series.retards) && series.retards.length ? series.retards : null;
+
+  const forecast = parseForecast(data?.results?.['flux-mensuel']?.forecast);
+  const segments = data?.results?.taches?.grouped?.segments ?? [];
+  const correlations = Array.isArray(data?.crossCorrelations) ? data.crossCorrelations : [];
+
+  if (!flux && !statuts && !projets && !retards && !segments.length && !correlations.length) {
+    return null;
+  }
+
+  /* --- 1. Évolution mensuelle --------------------------------------- */
+
+  const fluxChart = flux && (
+    <ChartFrame title={t('analytics', 'chartFlux')} note={t('analytics', 'axisMonth')}>
+      <ResponsiveContainer width="100%" height={260}>
+        <AreaChart data={flux} margin={{ top: 6, right: 12, bottom: 0, left: -18 }}>
+          <defs>
+            {FLUX_METRICS.map(m => (
+              <linearGradient key={m.key} id={`g-${m.key}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={m.color} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={m.color} stopOpacity={0.02} />
+              </linearGradient>
+            ))}
+          </defs>
+          <CartesianGrid stroke="#94a3b8" strokeOpacity={0.25} strokeDasharray="3 3" />
+          <XAxis dataKey="periode" tick={AXIS} interval="preserveStartEnd" />
+          <YAxis tick={AXIS} allowDecimals={false} />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />
+          {FLUX_METRICS.map(m => (
+            <Area
+              key={m.key}
+              type="monotone"
+              dataKey={m.key}
+              name={t('analytics', m.label)}
+              stroke={m.color}
+              strokeWidth={2}
+              fill={`url(#g-${m.key})`}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+          ))}
+        </AreaChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
+
+  /* --- 2. Prévision -------------------------------------------------- */
+
+  const current = FLUX_METRICS.find(m => m.key === metric) ?? FLUX_METRICS[2];
+  const predicted = forecast[current.remote] ?? [];
+
+  const forecastRows = flux
+    ? flux.map(f => ({ label: f.periode, reel: f[current.key] ?? null, prevu: null }))
+    : [];
+
+  if (forecastRows.length && predicted.length) {
+    // Le premier point de projection part du dernier point observé : sans ce
+    // raccord, la courbe pointillée semblerait flotter loin de l'histoire.
+    forecastRows[forecastRows.length - 1].prevu = forecastRows[forecastRows.length - 1].reel;
+    predicted.forEach((p, i) =>
+      forecastRows.push({ label: `M+${i + 1}`, reel: null, prevu: Number(p.predicted_value) })
+    );
+  }
+
+  const forecastChart = flux && predicted.length > 0 && (
+    <ChartFrame
+      title={t('analytics', 'chartForecast')}
+      note={t('analytics', 'forecastNote').replace('{n}', predicted.length)}
+    >
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {FLUX_METRICS.map(m => (
+          <button
+            key={m.key}
+            type="button"
+            onClick={() => setMetric(m.key)}
+            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-colors ${
+              m.key === metric
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+            }`}
+          >
+            {t('analytics', m.label)}
+          </button>
+        ))}
+      </div>
+
+      <ResponsiveContainer width="100%" height={240}>
+        <LineChart data={forecastRows} margin={{ top: 6, right: 12, bottom: 0, left: -18 }}>
+          <CartesianGrid stroke="#94a3b8" strokeOpacity={0.25} strokeDasharray="3 3" />
+          <XAxis dataKey="label" tick={AXIS} interval="preserveStartEnd" />
+          <YAxis tick={AXIS} />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />
+          <Line
+            type="monotone"
+            dataKey="reel"
+            name={t('analytics', 'actualLabel')}
+            stroke={current.color}
+            strokeWidth={2.5}
+            dot={{ r: 3 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="prevu"
+            name={t('analytics', 'forecastLabel')}
+            stroke={current.color}
+            strokeWidth={2.5}
+            strokeDasharray="6 4"
+            dot={{ r: 3, fill: current.color }}
+            connectNulls
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
+
+  /* --- 3. Répartition des statuts ------------------------------------ */
+
+  const statutsChart = statuts && (
+    <ChartFrame title={t('analytics', 'chartStatuts')}>
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart>
+          <Pie
+            data={statuts}
+            dataKey="total"
+            nameKey="statut"
+            innerRadius={54}
+            outerRadius={82}
+            paddingAngle={2}
+            stroke="none"
+          >
+            {statuts.map(s => (
+              <Cell key={s.statut} fill={statusColor(s.statut)} />
+            ))}
+          </Pie>
+          <Tooltip content={<ChartTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
+      <ul className="mt-2 space-y-1">
+        {statuts.map(s => (
+          <li key={s.statut} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: statusColor(s.statut) }}
+            />
+            <span className="truncate">{s.statut}</span>
+            <span className="ml-auto font-black text-slate-900 dark:text-white">{s.total}</span>
+          </li>
+        ))}
+      </ul>
+    </ChartFrame>
+  );
+
+  /* --- 4. Charge et retards par équipe -------------------------------- */
+
+  const equipesChart = retards && (
+    <ChartFrame title={t('analytics', 'chartTeams')}>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={retards} margin={{ top: 6, right: 12, bottom: 0, left: -18 }}>
+          <CartesianGrid stroke="#94a3b8" strokeOpacity={0.25} strokeDasharray="3 3" />
+          <XAxis dataKey="equipe" tick={{ ...AXIS, fontSize: 10 }} interval={0} />
+          <YAxis tick={AXIS} allowDecimals={false} />
+          <Tooltip content={<ChartTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 6 }} />
+          <Bar dataKey="total" name={t('analytics', 'totalLabel')} fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+          <Bar
+            dataKey="retards"
+            name={t('analytics', 'overdueLabel')}
+            fill={COLORS.retards}
+            radius={[4, 4, 0, 0]}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
+
+  /* --- 5. Avancement par projet --------------------------------------- */
+
+  const projetsRows = projets ? [...projets].sort((a, b) => a.avancement - b.avancement) : [];
+  const projetsChart = projetsRows.length > 0 && (
+    <ChartFrame title={t('analytics', 'chartProjects')} note={t('analytics', 'axisProgress')}>
+      <ResponsiveContainer width="100%" height={Math.max(200, projetsRows.length * 30 + 30)}>
+        <BarChart
+          data={projetsRows}
+          layout="vertical"
+          margin={{ top: 6, right: 16, bottom: 0, left: 8 }}
+        >
+          <CartesianGrid stroke="#94a3b8" strokeOpacity={0.25} strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" domain={[0, 100]} tick={AXIS} unit=" %" />
+          <YAxis
+            type="category"
+            dataKey="projet"
+            width={168}
+            tick={{ ...AXIS, fontSize: 10 }}
+            interval={0}
+          />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
+          <Bar dataKey="avancement" name={t('analytics', 'axisProgress')} radius={[0, 4, 4, 0]}>
+            {projetsRows.map(p => (
+              <Cell
+                key={p.projet}
+                fill={p.avancement >= 100 ? '#10b981' : p.avancement >= 50 ? '#6366f1' : '#f59e0b'}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
+
+  /* --- 6. Segments du découpage choisi -------------------------------- */
+
+  const hasDelay = segments.length > 0 && segments.every(s => Number.isFinite(s?.metrics?.delai_jours?.mean));
+  const segmentRows = segments
+    .map(s => ({
+      label: String(s.segment ?? ''),
+      value: hasDelay ? s.metrics.delai_jours.mean : Number(s.row_count ?? 0),
+      count: s.row_count
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  const segmentsChart = segmentRows.length > 0 && (
+    <ChartFrame
+      title={t('analytics', 'chartSegments')}
+      note={t('analytics', hasDelay ? 'axisDelay' : 'axisCount')}
+    >
+      <ResponsiveContainer width="100%" height={Math.max(200, segmentRows.length * 30 + 30)}>
+        <BarChart
+          data={segmentRows}
+          layout="vertical"
+          margin={{ top: 6, right: 16, bottom: 0, left: 8 }}
+        >
+          <CartesianGrid stroke="#94a3b8" strokeOpacity={0.25} strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" tick={AXIS} />
+          <YAxis
+            type="category"
+            dataKey="label"
+            width={168}
+            tick={{ ...AXIS, fontSize: 10 }}
+            interval={0}
+          />
+          <Tooltip
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null;
+              const row = payload[0]?.payload;
+              return (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs shadow-xl">
+                  <p className="mb-1 font-black text-slate-700 dark:text-slate-200">{label}</p>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    {t('analytics', hasDelay ? 'axisDelay' : 'axisCount')} :{' '}
+                    <span className="font-bold text-slate-900 dark:text-white">{fmt(row.value)}</span>
+                  </p>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    {t('analytics', 'axisCount')} :{' '}
+                    <span className="font-bold text-slate-900 dark:text-white">{row.count}</span>
+                  </p>
+                </div>
+              );
+            }}
+            cursor={{ fill: 'rgba(99,102,241,0.06)' }}
+          />
+          <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartFrame>
+  );
+
+  /* --- 7. Corrélations entre jeux -------------------------------------- */
+
+  const corrRows = correlations
+    .map(c => ({
+      label: `${c.column1} ↔ ${c.column2}`,
+      value: Number(c.coefficient)
+    }))
+    .filter(r => Number.isFinite(r.value));
+
+  const corrChart = corrRows.length > 0 && (
+    <ChartFrame
+      title={t('analytics', 'chartLinks')}
+      note={t('analytics', 'axisCorr')}
+    >
+      <ResponsiveContainer width="100%" height={Math.max(160, corrRows.length * 56 + 40)}>
+        <BarChart
+          data={corrRows}
+          layout="vertical"
+          margin={{ top: 6, right: 16, bottom: 0, left: 8 }}
+        >
+          <CartesianGrid stroke="#94a3b8" strokeOpacity={0.25} strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" domain={[-1, 1]} tick={AXIS} />
+          <YAxis
+            type="category"
+            dataKey="label"
+            width={230}
+            tick={{ ...AXIS, fontSize: 10 }}
+            interval={0}
+          />
+          <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,102,241,0.06)' }} />
+          <Bar dataKey="value" name={t('analytics', 'axisCorr')} radius={[0, 4, 4, 0]}>
+            {corrRows.map((r, i) => (
+              <Cell key={`${r.label}-${i}`} fill={r.value < 0 ? COLORS.retards : COLORS.terminees} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <ul className="mt-2 space-y-1">
+        {correlations.map((c, i) => (
+          <li key={i} className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <span
+              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black ${
+                c.relationship === 'negative'
+                  ? 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                  : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+              }`}
+            >
+              r = {fmt(c.coefficient)}
+            </span>
+            <span className="truncate">
+              {c.dataset1}.{c.column1} ↔ {c.dataset2}.{c.column2}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </ChartFrame>
+  );
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <h3 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <ChartColumn className="h-4 w-4 text-indigo-500" />
+        {t('analytics', 'chartsTitle')}
+      </h3>
+
+      <div className="space-y-8">
+        {fluxChart}
+        {forecastChart}
+
+        {(statutsChart || equipesChart) && (
+          <div className="grid gap-8 lg:grid-cols-2">
+            {statutsChart}
+            {equipesChart}
+          </div>
+        )}
+
+        {(projetsChart || segmentsChart) && (
+          <div className="grid gap-8 lg:grid-cols-2">
+            {projetsChart}
+            {segmentsChart}
+          </div>
+        )}
+
+        {corrChart}
+      </div>
+    </section>
+  );
+}
